@@ -1,0 +1,33 @@
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+build/
+develop-eggs/
+dist/
+
+# node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.eslintcache
+
+# env
+.env
+.env.local
+
+# db
+*.sqlite3
+
+# docker
+docker-compose.override.yml
+
+# ide
+.idea/
+.vscode/
+
+# os
+.DS_Store
+Thumbs.db
