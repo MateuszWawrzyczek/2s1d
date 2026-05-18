@@ -27,6 +27,13 @@ uv run uvicorn app.main:app --reload
 Po uruchomieniu serwera:
 http://127.0.0.1:8000
 
+## Testowanie
+
+Uruchom testy:
+```bash
+uv run pytest -v
+```
+
 ## Struktura projektu
 
 - app/api/v1/endpoints/ - pliki z definicjami scieżek API
