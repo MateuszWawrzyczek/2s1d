@@ -5,6 +5,7 @@ Aplikacja kliencka oparta na frameworku React.
 ## Instalacja lokalna
 
 Zainstaluj zaleznosci:
+
 ```bash
 npm install
 ```
@@ -12,6 +13,7 @@ npm install
 ## Uruchamianie
 
 Uruchom serwer deweloperski:
+
 ```bash
 npm run dev
 ```
@@ -32,6 +34,21 @@ http://localhost:5173
 ## Budowanie wersji produkcyjnej
 
 Przygotowanie paczki do wdrożenia:
+
 ```bash
 npm run build
+```
+
+## Kontrola jakości
+
+Uruchom linting:
+
+```bash
+npm run lint
+```
+
+Sprawdź formatowanie:
+
+```bash
+npm run format:check
 ```
