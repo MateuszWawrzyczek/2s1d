@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     DEBUG: bool = False
 
+    DATABASE_URL: str
+
     model_config = {"env_file": BASE_DIR / ".env", "extra": "ignore"}
 
 
