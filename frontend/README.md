@@ -1,6 +1,6 @@
-# Frontend
+# Frontend (React + Vite)
 
-Aplikacja kliencka oparta na frameworku React.
+Aplikacja kliencka (SPA) oparta na bibliotece React oraz szybkim narzędziu budowania Vite, napisana w TypeScript.
 
 ## Instalacja lokalna
 
@@ -10,7 +10,7 @@ Zainstaluj zaleznosci:
 npm install
 ```
 
-## Uruchamianie
+## Uruchamianie lokalnie
 
 Uruchom serwer deweloperski:
 
@@ -18,20 +18,14 @@ Uruchom serwer deweloperski:
 npm run dev
 ```
 
-Po uruchomieniu aplikacja dostępna pod adresem:
-http://localhost:5173
+Po uruchomieniu serwera frontend dostępny będzie na:
+http://127.0.0.1:5173
 
-## Struktura projektu
+## Uruchamianie testów (Vitest)
 
-- public/ - zasoby statyczne (obrazy, ikony)
-- src/components/ - reużywalne komponenty UI
-- src/hooks/ - własne hooki Reacta
-- src/pages/ - komponenty odpowiadajace za widoki
-- src/services/ - komunikacja z API
-- src/types/ - definicje interfejsów i typów TypeScript
-- src/utils/ - funkcje pomocnicze i formatowanie
+Projekt posiada skonfigurowane środowisko testowe oparte na Vitest oraz React Testing Library.
 
-## Budowanie wersji produkcyjnej
+### Uruchamianie testów Lokalnie
 
 Przygotowanie paczki do wdrożenia:
 
