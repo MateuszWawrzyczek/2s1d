@@ -11,15 +11,15 @@
 
 - `/backend` - logika biznesowa i API
 - `/frontend` - interfejs użytkownika
-- `/infra` - konfiguracja Docker i Nginx
 - `/docs` - dokumentacja projektowa
 
 ## Uruchomienie
 
 Wymagania: Docker, Docker Compose, Git Bash (Windows) lub terminal (macOS/Linux).
 
+Pierwsza konfiguracja projektu. Przy pierwszym uruchomieniu kopiowane
+jest `.env.example` -> `.env`. Następnie należy uzupełnić zmienne w `.env` i
+uruchomić ponownie skrypt.
 ```bash
-sh scripts/setup.sh
+sh setup.sh
 ```
-
-Szczegóły dla systemów i opis pozostałych skryptów: [`scripts/README.md`](./scripts/README.md)

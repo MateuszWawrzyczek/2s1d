@@ -1,56 +1,61 @@
-version: "3.9"
-
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-go/master/schema/compose-spec.json
 services:
-
   db:
     image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - ${DB_PORT:-}:5432
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: ../infra/docker/backend/Dockerfile
     restart: unless-stopped
     env_file: .env
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
-    volumes:
-      - ./backend:/app
+
+  backend:
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - ${BACKEND_PORT:-}:8000
+    build:
+      context: backend
+      dockerfile: Dockerfile
+      target: development
+    develop:
+      watch:
+        - path: ./backend
+          action: sync
+          target: /app
+          initial_sync: true
+        - path: ./backend/pyproject.toml
+          action: rebuild
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432
+    env_file: .env
+    restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: ../infra/docker/frontend/Dockerfile
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "${FRONTEND_PORT:-5173}:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     depends_on:
       - backend
-    command: npm run dev -- --host 0.0.0.0
+    ports:
+      - ${FRONTEND_PORT:-}:5173
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+      target: development
+    develop:
+      watch:
+        - path: ./frontend
+          action: sync
+          target: /app
+          initial_sync: true
+        - path: ./frontend/package.json
+          action: rebuild
+    env_file: .env
+    restart: unless-stopped
 
 volumes:
   pgdata:

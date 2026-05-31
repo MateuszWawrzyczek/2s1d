@@ -1,6 +1,27 @@
+[project]
+name = "inventory-backend"
+version = "0.1.0"
+description = "System zarządzania - backend"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "alembic",
+  "fastapi",
+  "psycopg2-binary",
+  "pydantic-settings>=2.14.1",
+  "sqlalchemy",
+  "uvicorn[standard]",
+]
+
+[dependency-groups]
+dev = [
+  "httpx",
+  "pytest",
+]
+
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
@@ -9,23 +30,3 @@ ignore = []
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
-[project]
-name = "inventory-backend"
-version = "0.1.0"
-description = "System zarządzania - backend"
-readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "fastapi",
-    "uvicorn[standard]",
-    "psycopg2-binary",
-    "pydantic-settings>=2.14.1",
-    "sqlalchemy",
-    "alembic",
-]
-
-[tool.uv]
-dev-dependencies = [
-    "pytest",
-    "httpx",
-]
