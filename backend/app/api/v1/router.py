@@ -1,8 +1,9 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import audit_logs, categories, item_status
+from app.api.v1.endpoints import audit_logs, categories, item_status, qr_codes
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(item_status.router)
 api_router.include_router(categories.router)
+api_router.include_router(qr_codes.router, prefix="/qr-codes", tags=["qr-codes"])
 api_router.include_router(audit_logs.router, prefix="/audit-logs", tags=["audit-logs"])
