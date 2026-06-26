@@ -1,61 +1,79 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-go/master/schema/compose-spec.json
 services:
   db:
-    image: postgres:16-alpine
-    ports:
-      - ${DB_PORT:-}:5432
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-pz_db}
+      MYSQL_USER: ${MYSQL_USER:-pz_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-      interval: 10s
+      test:
+        [
+          'CMD-SHELL',
+          'mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD',
+        ]
       timeout: 5s
       retries: 5
-    restart: unless-stopped
-    env_file: .env
+      interval: 10s
 
-  backend:
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-pz_db}
+      MYSQL_USER: ${MYSQL_USER:-pz_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      DB_CONNECTION_LIMIT: ${DB_CONNECTION_LIMIT:-10}
+      DB_QUEUE_LIMIT: ${DB_QUEUE_LIMIT:-0}
+      DEV_BYPASS_AUTH: ${DEV_BYPASS_AUTH:-false}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:?set INITIAL_ADMIN_EMAIL in .env}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?set INITIAL_ADMIN_PASSWORD in .env}
+      NOTIFICATIONS_INTERVAL_MINUTES: ${NOTIFICATIONS_INTERVAL_MINUTES:-60}
+      NOTIFICATIONS_SCHEDULER_ENABLED: ${NOTIFICATIONS_SCHEDULER_ENABLED:-true}
+      PHOTOS_STORAGE_DIR: /data/photos
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+    ports:
+      - '${APP_PORT:-8787}:8787'
+    volumes:
+      - photos_data:/data/photos
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://127.0.0.1:8787/api/health'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
+        ]
+      timeout: 5s
+      retries: 5
+      interval: 10s
+
+  migrate:
+    build:
+      context: .
+      target: build
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - ${BACKEND_PORT:-}:8000
-    build:
-      context: backend
-      dockerfile: Dockerfile
-      target: development
-    develop:
-      watch:
-        - path: ./backend
-          action: sync
-          target: /app
-          initial_sync: true
-        - path: ./backend/pyproject.toml
-          action: rebuild
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432
-    env_file: .env
-    restart: unless-stopped
-
-  frontend:
-    depends_on:
-      - backend
-    ports:
-      - ${FRONTEND_PORT:-}:5173
-    build:
-      context: frontend
-      dockerfile: Dockerfile
-      target: development
-    develop:
-      watch:
-        - path: ./frontend
-          action: sync
-          target: /app
-          initial_sync: true
-        - path: ./frontend/package.json
-          action: rebuild
-    env_file: .env
-    restart: unless-stopped
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-pz_db}
+      MYSQL_USER: ${MYSQL_USER:-pz_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:?set INITIAL_ADMIN_EMAIL in .env}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?set INITIAL_ADMIN_PASSWORD in .env}
+    command: sh -c "pnpm run db:wait && pnpm run db:migrate && pnpm run db:seed"
 
 volumes:
-  pgdata:
+  mysql_data:
+  photos_data:

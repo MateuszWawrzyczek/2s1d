@@ -1,0 +1,54 @@
+.category-edit-dialog-backdrop {
+  position: fixed; inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; backdrop-filter: blur(8px);
+  animation: fadeIn 0.15s ease;
+}
+.category-edit-dialog {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 500px; width: 90%; max-height: 90vh;
+  display: flex; flex-direction: column;
+  animation: slideUp 0.2s ease;
+}
+.category-edit-dialog .dialog-header {
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+}
+.category-edit-dialog .dialog-header h2 {
+  margin: 0; font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.3px;
+}
+.category-edit-dialog .dialog-body {
+  padding: 24px; flex: 1; overflow-y: auto;
+}
+.category-edit-dialog .dialog-body .form-group {
+  margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px;
+}
+.category-edit-dialog .dialog-body .form-group label {
+  font-weight: 600; color: var(--text-muted); font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;
+}
+.category-edit-dialog .dialog-body .form-group input,
+.category-edit-dialog .dialog-body .form-group textarea {
+  padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px;
+  font-family: var(--font); transition: all 0.2s; background: var(--surface-2); color: var(--text);
+}
+.category-edit-dialog .dialog-body .form-group input:focus,
+.category-edit-dialog .dialog-body .form-group textarea:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0, 194, 113, 0.15);
+}
+.category-edit-dialog .dialog-body .form-group input:disabled,
+.category-edit-dialog .dialog-body .form-group textarea:disabled {
+  opacity: 0.5; cursor: not-allowed;
+}
+.category-edit-dialog .dialog-body .form-group input.input-error { border-color: var(--danger); }
+.category-edit-dialog .dialog-body .form-group textarea { resize: vertical; min-height: 80px; }
+.category-edit-dialog .dialog-body .field-error { color: var(--danger); font-size: 12px; margin-top: 2px; }
+.category-edit-dialog .dialog-body .error-message {
+  background-color: var(--danger-muted); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--danger);
+  padding: 12px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 13px;
+}
+.category-edit-dialog .dialog-footer {
+  padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px;
+}

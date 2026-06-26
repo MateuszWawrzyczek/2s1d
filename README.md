@@ -1,25 +1,17 @@
 # System Zarządzania Inwentaryzacją
 
-## Stack Technologiczny
+System służy do ewidencji aparatury pomiarowej AGH, obsługi wypożyczeń,
+lokalizacji, kodów QR i uprawnień do przedmiotów.
 
-- **Backend:** FastAPI
-- **Frontend:** React + TypeScript
-- **Baza danych:** PostgreSQL
-- **Konteneryzacja:** Docker + Docker Compose
+Instrukcja dla użytkowników: [docs/INSTRUKCJA_UZYTKOWNIKA.md](docs/INSTRUKCJA_UZYTKOWNIKA.md).
 
-## Struktura Projektu
+Rozszerzone przewodniki użytkownika: [docs/user/README.md](docs/user/README.md).
 
-- `/backend` - logika biznesowa i API
-- `/frontend` - interfejs użytkownika
-- `/docs` - dokumentacja projektowa
+Instrukcja wdrożenia Docker: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-## Uruchomienie
+Produkcja działa przez Docker: `docker compose up --build -d` po ustawieniu
+sekretów w `.env`. `DEV_BYPASS_AUTH=false` jest domyślne; tryb bypass zostaje
+tylko do lokalnego developmentu.
 
-Wymagania: Docker, Docker Compose, Git Bash (Windows) lub terminal (macOS/Linux).
-
-Pierwsza konfiguracja projektu. Przy pierwszym uruchomieniu kopiowane
-jest `.env.example` -> `.env`. Następnie należy uzupełnić zmienne w `.env` i
-uruchomić ponownie skrypt.
-```bash
-sh setup.sh
-```
+Adres działającej instalacji oraz pomoc w sprawie konta przekazuje administrator
+systemu.

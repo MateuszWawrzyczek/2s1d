@@ -1,33 +1,25 @@
-# python
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
-env/
-build/
-develop-eggs/
-dist/
-
-# node
 node_modules/
-npm-debug.log*
-yarn-error.log*
-.eslintcache
-
-# env
+dist/
+backend/.venv/
+backend/.pytest_cache/
+backend/.ruff_cache/
+.ruff_cache/
+frontend/node_modules/
+frontend/dist/
+**/__pycache__/
+*.pyc
 .env
 .env.local
-
-# db
+.dev.vars
 *.sqlite3
-
-# docker
 docker-compose.override.yml
-
-# ide
 .idea/
 .vscode/
-
-# os
 .DS_Store
 Thumbs.db
+.wrangler/
+coverage/
+backups/
+2025-03-06_koidc.sql
+.agents/
+skills-lock.json

@@ -1,0 +1,4 @@
+DEV_BYPASS_AUTH=true
+GOOGLE_CLIENT_ID=
+INITIAL_ADMIN_EMAIL=admin@agh.edu.pl
+JWT_SECRET=replace-with-local-random-secret

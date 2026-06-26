@@ -1,63 +1,142 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  backend:
-    name: Backend
+  app:
+    name: App
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: pz_db
+          MYSQL_USER: pz_user
+          MYSQL_PASSWORD: ci-user-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
+          node-version: '22'
+          cache: pnpm
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
+      - run: pnpm install --frozen-lockfile
 
-      - name: Install dependencies
-        working-directory: backend
-        run: uv sync --locked --dev
+      - name: Type check
+        run: pnpm run check
 
       - name: Lint
-        working-directory: backend
-        run: uvx ruff check .
+        run: pnpm run lint
 
-      - name: Check formatting
-        working-directory: backend
-        run: uvx ruff format --check .
+      - name: Build app
+        run: pnpm run build
+
+      - name: Run migrations and seed defaults
+        run: pnpm run db:wait && pnpm run db:migrate && pnpm run db:seed
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: pz_user
+          MYSQL_PASSWORD: ci-user-password
+          MYSQL_DATABASE: pz_db
+          INITIAL_ADMIN_EMAIL: admin@agh.edu.pl
+          INITIAL_ADMIN_PASSWORD: ci-initial-admin-password
 
       - name: Run tests
-        working-directory: backend
-        run: uv run pytest -v
+        run: pnpm test
 
-  frontend:
-    name: Frontend
-    runs-on: ubuntu-latest
+      - name: Run notification job
+        run: pnpm run notifications:run
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: pz_user
+          MYSQL_PASSWORD: ci-user-password
+          MYSQL_DATABASE: pz_db
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Validate Docker production environment
+        run: pnpm run validate:docker
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_USER: pz_user
+          MYSQL_PASSWORD: ci-user-password
+          MYSQL_DATABASE: pz_db
+          JWT_SECRET: ci-jwt-secret-value-at-least-32-chars
+          DEV_BYPASS_AUTH: 'false'
+          INITIAL_ADMIN_EMAIL: admin@agh.edu.pl
+          INITIAL_ADMIN_PASSWORD: ci-initial-admin-password
+          NOTIFICATIONS_INTERVAL_MINUTES: 60
+          TRUST_PROXY: 'false'
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+      - name: Start integration server
+        run: |
+          HOST=127.0.0.1 \
+          PORT=8787 \
+          MYSQL_HOST=127.0.0.1 \
+          MYSQL_PORT=3306 \
+          MYSQL_USER=pz_user \
+          MYSQL_PASSWORD=ci-user-password \
+          MYSQL_DATABASE=pz_db \
+          JWT_SECRET=integration-test-secret-value-32-chars \
+          DEV_BYPASS_AUTH=false \
+          INITIAL_ADMIN_EMAIL=admin@agh.edu.pl \
+          INITIAL_ADMIN_PASSWORD=ci-initial-admin-password \
+          pnpm run start > /tmp/app.log 2>&1 &
+          echo $! > /tmp/app.pid
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8787/api/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/app.log
+          exit 1
 
-      - name: Check dependencies
-        working-directory: frontend
-        run: npm ci
+      - name: Run API smoke checks
+        run: node scripts/smoke-api.mjs
+        env:
+          SMOKE_EXPECT_DEV_BYPASS: 'false'
+          SMOKE_ADMIN_EMAIL: admin@agh.edu.pl
+          SMOKE_ADMIN_PASSWORD: ci-initial-admin-password
 
-      - name: Check formatting
-        working-directory: frontend
-        run: npm run format:check && npm run lint
+      - name: Stop integration server
+        if: always()
+        run: kill "$(cat /tmp/app.pid)" || true
+
+      - name: Run Docker smoke
+        run: scripts/smoke-docker.sh
+        env:
+          COMPOSE_PROJECT_NAME: pz-ci-smoke
+          APP_PORT: 18787
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run browser tests
+        run: pnpm exec playwright test
