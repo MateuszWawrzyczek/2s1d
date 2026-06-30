@@ -18,13 +18,21 @@
         in
         {
           default = pkgs.mkShellNoCC {
-            packages = with pkgs; [
-              nodejs
-              corepack
-            ];
+            packages =
+              with pkgs;
+              [
+                nodejs
+                corepack
+              ]
+              ++ lib.optionals stdenv.isLinux [
+                chromium
+              ];
 
             shellHook = ''
               export PATH=$PWD/node_modules/.bin:$PATH
+              ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+                export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${pkgs.chromium}/bin/chromium
+              ''}
               echo "pz-worker dev shell"
               echo "  node:  $(node --version)"
               echo "  pnpm:  $(pnpm --version)"

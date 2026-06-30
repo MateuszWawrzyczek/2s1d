@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import jsQR from 'jsqr';
 import {
   qrService,
   type QuickActionItem,
   type ScannedQrItem,
 } from '../services/qrService';
-
-type BarcodeDetectorConstructor = new (options: { formats: string[] }) => {
-  detect(source: HTMLVideoElement): Promise<Array<{ rawValue: string }>>;
-};
 
 export default function QrScannerPage() {
   const [qrData, setQrData] = useState('');
@@ -19,7 +16,9 @@ export default function QrScannerPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const scanTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => stopCamera();
@@ -29,6 +28,7 @@ export default function QrScannerPage() {
     event.preventDefault();
     await resolveQr(qrData);
   }
+
   async function resolveQr(value: string) {
     const trimmed = value.trim();
     if (!trimmed) return;
@@ -53,33 +53,88 @@ export default function QrScannerPage() {
   }
 
   async function startCamera() {
-    const BarcodeDetector = getBarcodeDetector();
-    if (!BarcodeDetector) {
-      setError('Ta przeglądarka nie udostępnia skanowania kodów QR.');
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError(
+        'Ta przeglądarka nie udostępnia skanowania kodów QR. Wpisz System ID ręcznie albo wczytaj obraz etykiety.'
+      );
       return;
     }
     setError(null);
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' },
-    });
-    streamRef.current = stream;
-    setIsCameraActive(true);
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
-      void detectFromCamera(new BarcodeDetector({ formats: ['qr_code'] }));
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      });
+      streamRef.current = stream;
+      setIsCameraActive(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        scheduleScan();
+      }
+    } catch {
+      setError(
+        'Nie udało się uruchomić kamery. Wpisz System ID ręcznie albo wczytaj obraz etykiety.'
+      );
+      stopCamera();
     }
   }
-  async function detectFromCamera(
-    detector: InstanceType<BarcodeDetectorConstructor>
-  ) {
+
+  function scheduleScan() {
+    scanTimerRef.current = window.setTimeout(
+      () => void detectFromCamera(),
+      300
+    );
+  }
+
+  async function detectFromCamera() {
     if (!videoRef.current || !streamRef.current) return;
-    const [code] = await detector.detect(videoRef.current);
-    if (code?.rawValue) {
-      await resolveQr(code.rawValue);
+    const rawValue = decodeVideoFrame(videoRef.current);
+    if (rawValue) {
+      await resolveQr(rawValue);
       return;
     }
-    window.setTimeout(() => void detectFromCamera(detector), 350);
+    scheduleScan();
+  }
+
+  function decodeVideoFrame(video: HTMLVideoElement): string | null {
+    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return null;
+    const canvas = canvasRef.current;
+    if (!canvas || video.videoWidth === 0 || video.videoHeight === 0) {
+      return null;
+    }
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return null;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    return code?.data ?? null;
+  }
+
+  async function handleImageUpload(file: File | null) {
+    if (!file) return;
+    setError(null);
+    try {
+      const bitmap = await createImageBitmap(file);
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) return;
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      if (!code?.data) {
+        setError('Nie znaleziono kodu QR na wybranym obrazie.');
+        return;
+      }
+      await resolveQr(code.data);
+    } catch {
+      setError('Nie udało się odczytać kodu QR z obrazu.');
+    }
   }
 
   async function markDamaged() {
@@ -100,7 +155,12 @@ export default function QrScannerPage() {
       );
     }
   }
+
   function stopCamera() {
+    if (scanTimerRef.current) {
+      window.clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     setIsCameraActive(false);
@@ -112,8 +172,7 @@ export default function QrScannerPage() {
         <p className="login-eyebrow">Identyfikacja QR</p>
         <h1>Skanowanie przedmiotów</h1>
         <p className="login-copy">
-          Wprowadź kod z etykiety albo użyj kamery, aby odczytać identyfikator
-          przedmiotu i wykonać szybką akcję.
+          Wprowadź kod z etykiety, użyj kamery albo wczytaj zdjęcie etykiety QR.
         </p>
         <form className="form qr-form" onSubmit={handleSubmit}>
           <label className="form-label" htmlFor="qr-data">
@@ -141,6 +200,17 @@ export default function QrScannerPage() {
             >
               Skanuj kamerą
             </button>
+            <label className="btn btn-secondary">
+              Wczytaj obraz
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(event) =>
+                  void handleImageUpload(event.currentTarget.files?.[0] ?? null)
+                }
+              />
+            </label>
             {isCameraActive ? (
               <button
                 className="btn btn-secondary"
@@ -154,6 +224,7 @@ export default function QrScannerPage() {
         </form>
         {error ? <div className="alert alert-error">{error}</div> : null}
         <video className="qr-video" muted playsInline ref={videoRef} />
+        <canvas ref={canvasRef} style={{ display: 'none' }} />
       </div>
       <aside className="qr-panel">
         <p className="login-eyebrow">Szczegóły</p>
@@ -206,10 +277,4 @@ export default function QrScannerPage() {
       </aside>
     </section>
   );
-}
-function getBarcodeDetector(): BarcodeDetectorConstructor | null {
-  const candidate = (
-    window as Window & { BarcodeDetector?: BarcodeDetectorConstructor }
-  ).BarcodeDetector;
-  return candidate ?? null;
 }

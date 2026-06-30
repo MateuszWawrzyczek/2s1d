@@ -51,11 +51,25 @@ async function main() {
     if (locationCount === 0) {
       for (const location of DEFAULT_LOCATIONS) {
         await connection.query(
-          'INSERT INTO `locations` (name, kind, building, room) VALUES (?, ?, ?, ?)',
-          [location.name, location.kind, location.building, location.room]
+          'INSERT INTO `locations` (name, kind, building, room, map_x, map_y) VALUES (?, ?, ?, ?, ?, ?)',
+          [
+            location.name,
+            location.kind,
+            location.building,
+            location.room,
+            location.mapX,
+            location.mapY,
+          ]
         );
       }
       console.log('Seeded default locations.');
+    } else {
+      for (const location of DEFAULT_LOCATIONS) {
+        await connection.query(
+          'UPDATE `locations` SET map_x = COALESCE(map_x, ?), map_y = COALESCE(map_y, ?) WHERE name = ?',
+          [location.mapX, location.mapY, location.name]
+        );
+      }
     }
 
     const [userRows] = await connection.query(

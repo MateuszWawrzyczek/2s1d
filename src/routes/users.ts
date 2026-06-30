@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq, like } from 'drizzle-orm';
+import { and, eq, like } from 'drizzle-orm';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
 import { users } from '../db/schema';
 import { authMiddleware } from '../middleware/auth';
@@ -60,7 +60,7 @@ router.get('/search', zValidator('query', searchSchema), async (c) => {
       isActive: users.isActive,
     })
     .from(users)
-    .where(like(users.email, `%${q}%`))
+    .where(and(like(users.email, `%${q}%`), eq(users.isActive, true)))
     .limit(20);
   return c.json(rows);
 });
@@ -78,6 +78,31 @@ router.patch('/:id/deactivate', async (c) => {
     .limit(1);
   if (existing.length === 0) notFound('User not found');
   await db.update(users).set({ isActive: false }).where(eq(users.id, id));
+  const updated = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+      isActive: users.isActive,
+    })
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1);
+  return c.json(updated[0]);
+});
+
+router.patch('/:id/activate', async (c) => {
+  if (c.get('userRole') !== 'admin')
+    forbidden('Only admins can activate users');
+  const db = c.get('db');
+  const id = Number(c.req.param('id'));
+  const existing = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1);
+  if (existing.length === 0) notFound('User not found');
+  await db.update(users).set({ isActive: true }).where(eq(users.id, id));
   const updated = await db
     .select({
       id: users.id,

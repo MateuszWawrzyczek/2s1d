@@ -10,7 +10,7 @@ import { notFound } from '../lib/errors';
 type Variables = {
   db: MySql2Database<Record<string, never>>;
   userId: number;
-  userRole: 'admin' | 'user';
+  userRole: 'none' | 'admin' | 'user';
   isAuthenticated: boolean;
 };
 const router = new Hono<{ Variables: Variables; Bindings: Env }>();
@@ -28,7 +28,7 @@ router.post('/print', zValidator('json', batchSchema), async (c) => {
     .select({ id: items.id, systemId: items.systemId, name: items.name })
     .from(items)
     .where(inArray(items.id, body.item_ids));
-  if (rows.length === 0) notFound('No items found');
+  if (rows.length === 0) notFound('Nie znaleziono wybranych przedmiotów');
 
   return c.json({ items: rows });
 });

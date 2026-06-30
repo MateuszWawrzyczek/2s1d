@@ -32,14 +32,24 @@ const DEFAULT_LOCATIONS = [
     building: 'Budynek A',
     room: '001',
   },
-  { name: 'Sala 101', kind: 'internal', building: 'Budynek A', room: '101' },
+  {
+    name: 'Sala 101',
+    kind: 'internal',
+    building: 'Budynek A',
+    room: '101',
+  },
   {
     name: 'Laboratorium',
     kind: 'internal',
     building: 'Budynek B',
     room: '203',
   },
-  { name: 'Biuro', kind: 'internal', building: 'Budynek A', room: '305' },
+  {
+    name: 'Biuro',
+    kind: 'internal',
+    building: 'Budynek A',
+    room: '305',
+  },
 ];
 
 /**

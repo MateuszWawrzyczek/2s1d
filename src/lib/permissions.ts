@@ -34,7 +34,7 @@ export async function getItemPermissionLevel(
   db: MySql2Database<Record<string, never>>,
   itemId: number,
   userId: number,
-  userRole: 'admin' | 'user',
+  userRole: 'none' | 'admin' | 'user',
   ownerId: number | null,
   ownerGroupId?: number | null
 ): Promise<PermissionLevel> {

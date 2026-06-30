@@ -161,7 +161,9 @@ export default function LoginPage() {
         email: registerEmail,
         password: registerPassword,
       });
-      setRegistrationMessage('Konto utworzone. Możesz się zalogować.');
+      setRegistrationMessage(
+        'Konto wymaga zatwierdzenia przez administratora.'
+      );
       setRegisterEmail('');
       setRegisterPassword('');
     } catch (err) {

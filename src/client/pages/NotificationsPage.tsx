@@ -100,32 +100,42 @@ export default function NotificationsPage() {
               Zapisz ustawienie
             </button>
           </form>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Typ</th>
-                <th>Kanał</th>
-                <th>Treść</th>
-                <th>Zaplanowano</th>
-                <th>Wysłano</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.eventType}</td>
-                  <td>{item.channel}</td>
-                  <td>{item.payload}</td>
-                  <td>{new Date(item.scheduledAt).toLocaleString('pl-PL')}</td>
-                  <td>
-                    {item.sentAt
-                      ? new Date(item.sentAt).toLocaleString('pl-PL')
-                      : 'Nie'}
-                  </td>
+          <div className="table-wrap table-wrap--scroll">
+            <table className="table notification-events-table">
+              <thead>
+                <tr>
+                  <th>Typ</th>
+                  <th>Kanał</th>
+                  <th>Treść</th>
+                  <th>Zaplanowano</th>
+                  <th>Wysłano</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {events.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>Brak zdarzeń powiadomień.</td>
+                  </tr>
+                ) : (
+                  events.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.eventType}</td>
+                      <td>{item.channel}</td>
+                      <td>{item.payload}</td>
+                      <td>
+                        {new Date(item.scheduledAt).toLocaleString('pl-PL')}
+                      </td>
+                      <td>
+                        {item.sentAt
+                          ? new Date(item.sentAt).toLocaleString('pl-PL')
+                          : 'Nie'}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </section>

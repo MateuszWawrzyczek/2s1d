@@ -12,6 +12,7 @@ vi.mock('../services/itemService', () => ({
 vi.mock('../services/batchQrService', () => ({
   batchQrService: {
     download: vi.fn(),
+    downloadImages: vi.fn(),
   },
 }));
 
@@ -41,6 +42,7 @@ describe('BatchQrPage', () => {
       },
     ]);
     vi.mocked(batchQrService.download).mockResolvedValue(undefined);
+    vi.mocked(batchQrService.downloadImages).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -71,5 +73,18 @@ describe('BatchQrPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Pobierz PDF' }));
 
     expect(batchQrService.download).toHaveBeenCalledWith([1, 2], 'large');
+  });
+
+  it('pobiera osobne pliki PNG dla wybranych przedmiotów', async () => {
+    render(<BatchQrPage />);
+
+    await screen.findByText('Oscyloskop Tektronix TBS1102');
+
+    fireEvent.click(
+      screen.getByLabelText('Wybierz Oscyloskop Tektronix TBS1102')
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Pobierz PNG osobno' }));
+
+    expect(batchQrService.downloadImages).toHaveBeenCalledWith([1], 'medium');
   });
 });

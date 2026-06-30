@@ -21,6 +21,8 @@ export interface CreateLocationPayload {
   mapY?: number;
 }
 
+export type UpdateLocationPayload = Partial<CreateLocationPayload>;
+
 interface BackendItem {
   id: number;
   systemId?: string | null;
@@ -294,6 +296,42 @@ export const itemService = {
     await ensureOk(r);
     const data = (await r.json()) as BackendLocation;
     return mapLocation(data);
+  },
+  async updateLocationPoint(
+    locationId: number,
+    payload: UpdateLocationPayload
+  ): Promise<Location> {
+    if (USE_MOCKS) {
+      await delay(200);
+      const current = mockLocations.find((location) => location.id === locationId);
+      if (!current) throw new Error('Lokalizacja nie istnieje.');
+      Object.assign(current, payload);
+      return current;
+    }
+    const r = await fetch(`/api/v1/locations/${locationId}`, {
+      method: 'PATCH',
+      headers: jsonAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    await ensureOk(r);
+    return mapLocation((await r.json()) as BackendLocation);
+  },
+  async deleteLocationPoint(locationId: number): Promise<void> {
+    if (USE_MOCKS) {
+      await delay(200);
+      const index = mockLocations.findIndex((location) => location.id === locationId);
+      if (index === -1) throw new Error('Lokalizacja nie istnieje.');
+      mockLocations.splice(index, 1);
+      mockItems = mockItems.map((item) =>
+        item.locationId === locationId ? { ...item, locationId: 0 } : item
+      );
+      return;
+    }
+    const r = await fetch(`/api/v1/locations/${locationId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    await ensureOk(r);
   },
   async updateLocation(itemId: number, locationId: number): Promise<void> {
     if (USE_MOCKS) {

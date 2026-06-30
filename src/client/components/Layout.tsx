@@ -212,7 +212,9 @@ export const Layout = () => {
                 <div className="sidebar-user-info">
                   <div className="sidebar-user-name">{user.email}</div>
                   <div className="sidebar-user-role">
-                    {user.role === 'admin' ? 'Administrator' : 'Użytkownik'}
+                    {user.role === 'admin'
+                      ? 'Administrator'
+                      : 'Pracownik'}
                   </div>
                 </div>
               </div>

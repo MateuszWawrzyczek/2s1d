@@ -3,14 +3,14 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { eq, and, ne } from 'drizzle-orm';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
-import { locations, type Location } from '../db/schema';
+import { items, locations, type Location } from '../db/schema';
 import { authMiddleware } from '../middleware/auth';
 import { notFound, badRequest } from '../lib/errors';
 
 type Variables = {
   db: MySql2Database<Record<string, never>>;
   userId: number;
-  userRole: 'admin' | 'user';
+  userRole: 'none' | 'admin' | 'user';
   isAuthenticated: boolean;
 };
 
@@ -58,7 +58,7 @@ router.get('/:id', async (c) => {
     .from(locations)
     .where(eq(locations.id, id))
     .limit(1);
-  if (rows.length === 0) notFound('Location not found');
+  if (rows.length === 0) notFound('Lokalizacja nie istnieje');
   return c.json(toResponse(rows[0]));
 });
 
@@ -70,7 +70,7 @@ router.post('/', zValidator('json', createSchema), async (c) => {
     .from(locations)
     .where(eq(locations.name, body.name))
     .limit(1);
-  if (existing.length > 0) badRequest('Location with this name already exists');
+  if (existing.length > 0) badRequest('Lokalizacja o tej nazwie już istnieje');
   const result = await db.insert(locations).values({
     name: body.name,
     kind: body.kind,
@@ -100,14 +100,14 @@ router.patch('/:id', zValidator('json', createSchema.partial()), async (c) => {
     .from(locations)
     .where(eq(locations.id, id))
     .limit(1);
-  if (existing.length === 0) notFound('Location not found');
+  if (existing.length === 0) notFound('Lokalizacja nie istnieje');
   if (body.name) {
     const dup = await db
       .select()
       .from(locations)
       .where(and(eq(locations.name, body.name), ne(locations.id, id)))
       .limit(1);
-    if (dup.length > 0) badRequest('Location with this name already exists');
+    if (dup.length > 0) badRequest('Lokalizacja o tej nazwie już istnieje');
   }
   const d: Record<string, unknown> = {};
   if (body.name !== undefined) d.name = body.name;
@@ -137,7 +137,11 @@ router.delete('/:id', async (c) => {
     .from(locations)
     .where(eq(locations.id, id))
     .limit(1);
-  if (existing.length === 0) notFound('Location not found');
+  if (existing.length === 0) notFound('Lokalizacja nie istnieje');
+  await db
+    .update(items)
+    .set({ locationId: null })
+    .where(eq(items.locationId, id));
   await db.delete(locations).where(eq(locations.id, id));
   return c.body(null, 204);
 });

@@ -32,15 +32,33 @@ const DEFAULT_LOCATIONS = [
     kind: 'internal',
     building: 'Budynek A',
     room: '001',
+    mapX: 19.9183,
+    mapY: 50.0664,
   },
-  { name: 'Sala 101', kind: 'internal', building: 'Budynek A', room: '101' },
+  {
+    name: 'Sala 101',
+    kind: 'internal',
+    building: 'Budynek A',
+    room: '101',
+    mapX: 19.9203,
+    mapY: 50.0662,
+  },
   {
     name: 'Laboratorium',
     kind: 'internal',
     building: 'Budynek B',
     room: '203',
+    mapX: 19.9216,
+    mapY: 50.0671,
   },
-  { name: 'Biuro', kind: 'internal', building: 'Budynek A', room: '305' },
+  {
+    name: 'Biuro',
+    kind: 'internal',
+    building: 'Budynek A',
+    room: '305',
+    mapX: 19.9171,
+    mapY: 50.0649,
+  },
 ];
 
 async function runAutoMigrate(rawDb: RawDb): Promise<void> {
@@ -124,12 +142,19 @@ async function seedDefaults(rawDb: RawDb): Promise<void> {
   if ((locRows as { cnt: number }[])[0].cnt === 0) {
     for (const loc of DEFAULT_LOCATIONS) {
       await rawDb.execute(
-        'INSERT INTO `locations` (name, kind, building, room) VALUES (?, ?, ?, ?)',
-        [loc.name, loc.kind, loc.building, loc.room]
+        'INSERT INTO `locations` (name, kind, building, room, map_x, map_y) VALUES (?, ?, ?, ?, ?, ?)',
+        [loc.name, loc.kind, loc.building, loc.room, loc.mapX, loc.mapY]
       );
     }
 
     console.log('[auto-migrate] seeded default locations');
+  } else {
+    for (const loc of DEFAULT_LOCATIONS) {
+      await rawDb.execute(
+        'UPDATE `locations` SET map_x = COALESCE(map_x, ?), map_y = COALESCE(map_y, ?) WHERE name = ?',
+        [loc.mapX, loc.mapY, loc.name]
+      );
+    }
   }
 }
 

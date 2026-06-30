@@ -481,6 +481,9 @@ a:hover {
   border-radius: var(--radius);
   overflow: hidden;
 }
+.table-wrap--scroll {
+  overflow-x: auto;
+}
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -520,6 +523,7 @@ a:hover {
 }
 .td-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
@@ -794,6 +798,7 @@ a:hover {
   border-radius: var(--radius-sm);
   padding: 10px 14px;
   color: var(--text);
+  color-scheme: dark;
   font-family: var(--font);
   font-size: 14px;
   transition: all var(--transition);
@@ -813,6 +818,13 @@ textarea.form-input {
 }
 select.form-input {
   cursor: pointer;
+  background-color: var(--surface-2);
+  color: var(--text);
+}
+select.form-input option,
+select.form-input optgroup {
+  background-color: var(--surface-2);
+  color: var(--text);
 }
 .form-input--compact {
   min-width: 120px;
@@ -1052,7 +1064,7 @@ select.form-input {
 
 .notification-form {
   display: grid;
-  grid-template-columns: repeat(2, max-content) minmax(180px, 260px) max-content;
+  grid-template-columns: minmax(180px, 260px) max-content;
   gap: 14px;
   align-items: end;
   margin-bottom: 24px;
@@ -1060,6 +1072,15 @@ select.form-input {
   border: 1px solid var(--border);
   background: var(--surface);
   border-radius: var(--radius);
+}
+
+.notification-form .alert {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.notification-events-table {
+  min-width: 720px;
 }
 
 .notification-form label:not(.form-label) {

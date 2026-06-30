@@ -6,16 +6,7 @@ export type QrSize = 'small' | 'medium' | 'large';
 
 export const batchQrService = {
   async download(itemIds: number[], size: QrSize = 'medium'): Promise<void> {
-    const response = await fetch('/api/v1/batch-qr/print', {
-      method: 'POST',
-      headers: jsonAuthHeaders(),
-      body: JSON.stringify({ item_ids: itemIds }),
-    });
-    await ensureOk(response);
-    const data = (await response.json()) as {
-      items: { id: number; systemId: string | null; name: string }[];
-    };
-    const items = data.items;
+    const items = await fetchBatchQrItems(itemIds);
 
     const doc = new jsPDF();
     const qrSize = size === 'small' ? 24 : size === 'large' ? 40 : 30;
@@ -40,11 +31,7 @@ export const batchQrService = {
         y + 6
       );
 
-      const qrDataUrl = await QRCode.toDataURL(identifier, {
-        width: size === 'small' ? 120 : size === 'large' ? 180 : 150,
-        margin: 1,
-        color: { dark: '#000000', light: '#ffffff' },
-      });
+      const qrDataUrl = await makeQrDataUrl(identifier, size);
 
       doc.addImage(qrDataUrl, 'PNG', 20, y + 10, qrSize, qrSize);
 
@@ -53,7 +40,54 @@ export const batchQrService = {
 
     doc.save('qr_labels.pdf');
   },
+
+  async downloadImages(
+    itemIds: number[],
+    size: QrSize = 'medium'
+  ): Promise<void> {
+    const items = await fetchBatchQrItems(itemIds);
+
+    for (const item of items) {
+      const identifier = item.systemId || `ITEM-${item.id}`;
+      const dataUrl = await makeQrDataUrl(identifier, size);
+      const anchor = document.createElement('a');
+      anchor.href = dataUrl;
+      anchor.download = `${safeFilename(identifier)}-${safeFilename(item.name)}.png`;
+      anchor.click();
+    }
+  },
 };
+
+async function fetchBatchQrItems(
+  itemIds: number[]
+): Promise<{ id: number; systemId: string | null; name: string }[]> {
+  const response = await fetch('/api/v1/batch-qr/print', {
+    method: 'POST',
+    headers: jsonAuthHeaders(),
+    body: JSON.stringify({ item_ids: itemIds }),
+  });
+  await ensureOk(response);
+  const data = (await response.json()) as {
+    items: { id: number; systemId: string | null; name: string }[];
+  };
+  return data.items;
+}
+
+function makeQrDataUrl(identifier: string, size: QrSize): Promise<string> {
+  return QRCode.toDataURL(identifier, {
+    width: size === 'small' ? 120 : size === 'large' ? 180 : 150,
+    margin: 1,
+    color: { dark: '#000000', light: '#ffffff' },
+  });
+}
+
+function safeFilename(value: string): string {
+  return value
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-zA-Z0-9._-]/g, '')
+    .slice(0, 80);
+}
 
 async function ensureOk(response: Response): Promise<void> {
   if (response.ok) return;

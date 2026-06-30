@@ -35,14 +35,18 @@ export default function BatchQrPage() {
   function toggleAll() {
     setSelectedIds(allSelected ? [] : items.map((item) => item.id));
   }
-  async function download() {
+  async function download(format: 'pdf' | 'png') {
     setError(null);
     setIsDownloading(true);
     try {
-      await batchQrService.download(selectedIds, qrSize);
+      if (format === 'pdf') {
+        await batchQrService.download(selectedIds, qrSize);
+      } else {
+        await batchQrService.downloadImages(selectedIds, qrSize);
+      }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Nie udało się wygenerować PDF.'
+        err instanceof Error ? err.message : 'Nie udało się wygenerować QR.'
       );
     } finally {
       setIsDownloading(false);
@@ -76,9 +80,17 @@ export default function BatchQrPage() {
             className="btn btn-primary"
             disabled={!selectedIds.length || isDownloading}
             type="button"
-            onClick={download}
+            onClick={() => download('pdf')}
           >
             {isDownloading ? 'Generowanie...' : 'Pobierz PDF'}
+          </button>
+          <button
+            className="btn btn-secondary"
+            disabled={!selectedIds.length || isDownloading}
+            type="button"
+            onClick={() => download('png')}
+          >
+            Pobierz PNG osobno
           </button>
         </div>
       </div>

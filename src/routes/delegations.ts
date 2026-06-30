@@ -12,7 +12,7 @@ import { createAuditLog } from '../lib/audit';
 type Variables = {
   db: MySql2Database<Record<string, never>>;
   userId: number;
-  userRole: 'admin' | 'user';
+  userRole: 'none' | 'admin' | 'user';
   isAuthenticated: boolean;
 };
 const router = new Hono<{ Variables: Variables; Bindings: Env }>();
@@ -64,7 +64,7 @@ async function assertCanManageDelegations(
   db: MySql2Database<Record<string, never>>,
   itemId: number,
   userId: number,
-  userRole: 'admin' | 'user'
+  userRole: 'none' | 'admin' | 'user'
 ) {
   if (userRole === 'admin') return;
   const item = await db
