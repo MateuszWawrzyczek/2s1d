@@ -42,6 +42,7 @@
 html {
   scrollbar-color: var(--surface-3) var(--bg);
   scrollbar-width: thin;
+  -webkit-text-size-adjust: 100%;
 }
 
 ::-webkit-scrollbar {
@@ -82,6 +83,35 @@ a {
 }
 a:hover {
   color: var(--accent-hover);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid rgba(0, 230, 133, 0.75);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 10000;
+  transform: translateY(-140%);
+  background: var(--accent);
+  color: #000;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  padding: 10px 14px;
+  box-shadow: var(--shadow-lg);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+  color: #000;
 }
 
 /* ============ App Shell ============ */
@@ -256,6 +286,14 @@ a:hover {
   width: 100%;
   max-width: 1200px;
   margin-inline: auto;
+}
+
+.mobile-nav-toggle {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 60;
 }
 
 /* ============ Page ============ */
@@ -479,7 +517,9 @@ a:hover {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 .table-wrap--scroll {
   overflow-x: auto;
@@ -513,6 +553,13 @@ a:hover {
 .table tbody tr:hover td {
   background: var(--surface-2);
 }
+.table tbody tr[role='button'] {
+  cursor: pointer;
+}
+.table tbody tr[role='button']:focus-visible td {
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 2px rgba(0, 230, 133, 0.75);
+}
 .td-name {
   font-weight: 600;
 }
@@ -526,6 +573,7 @@ a:hover {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 .table-sort-button {
   appearance: none;
@@ -722,6 +770,7 @@ a:hover {
   z-index: 9999;
   backdrop-filter: blur(8px);
   animation: fadeIn 0.15s ease;
+  padding: 16px;
 }
 @keyframes fadeIn {
   from {
@@ -740,8 +789,9 @@ a:hover {
   padding: 28px;
   box-shadow: var(--shadow-lg);
   animation: slideUp 0.2s ease;
-  max-height: 90vh;
+  max-height: min(90vh, 760px);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 @keyframes slideUp {
   from {
@@ -1424,10 +1474,63 @@ select.form-input optgroup {
     left: 0;
   }
   .main-content {
-    padding: 24px 16px;
+    padding: 72px 16px 24px;
   }
   .mobile-nav-toggle {
     display: flex !important;
+  }
+  .page-header {
+    display: grid;
+    align-items: start;
+  }
+  .page-header > .td-actions,
+  .page-header > .btn {
+    width: 100%;
+  }
+  .page-header > .td-actions .form-input,
+  .page-header > .btn {
+    width: 100%;
+  }
+  .table {
+    display: block;
+    max-width: 100%;
+    min-width: 680px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-pagination {
+    align-items: stretch;
+    display: grid;
+    gap: 12px;
+  }
+  .table-pagination .td-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .filters-panel {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .filters-panel .form-label,
+  .filters-panel .form-input,
+  .filters-panel .category-dropdown {
+    grid-row: auto;
+  }
+  .form-actions {
+    display: grid;
+    justify-content: stretch;
+  }
+  .form-actions .btn {
+    width: 100%;
+  }
+  .modal-overlay {
+    align-items: stretch;
+    padding: 8px;
+  }
+  .modal {
+    border-radius: var(--radius);
+    max-height: calc(100vh - 16px);
+    padding: 20px;
   }
 
   .login-grid {
@@ -1473,6 +1576,51 @@ select.form-input optgroup {
   }
   .quick-actions {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  body {
+    font-size: 15px;
+  }
+  .main-content {
+    padding-inline: 12px;
+  }
+  .page-title {
+    font-size: 22px;
+  }
+  .stats-grid,
+  .location-controls__grid,
+  .import-mapping {
+    grid-template-columns: 1fr;
+  }
+  .login-panel,
+  .qr-panel,
+  .import-panel,
+  .location-panel__summary,
+  .location-controls,
+  .photos-panel {
+    padding: 20px;
+  }
+  .td-actions,
+  .borrowing-card__actions {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  .btn,
+  .form-input--compact {
+    min-height: 44px;
+    width: 100%;
+  }
+  .login-session dl,
+  .qr-details,
+  .import-report dl {
+    grid-template-columns: 1fr;
+  }
+  .location-map {
+    min-height: 260px;
   }
 }
 

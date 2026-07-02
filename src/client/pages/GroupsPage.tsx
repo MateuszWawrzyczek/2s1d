@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X } from 'lucide-react';
+import Dialog from '../components/Dialog';
 import { useAuth } from '../hooks/useAuth';
 import { jsonAuthHeaders } from '../services/authHeaders';
 
@@ -370,62 +370,55 @@ export default function GroupsPage() {
       )}
 
       {(showCreateForm || editingGroup) && (
-        <div
-          className="modal-overlay"
-          onClick={() => {
+        <Dialog
+          title={editingGroup ? 'Edytuj grupę' : 'Nowa grupa'}
+          onClose={() => {
             setShowCreateForm(false);
             setEditingGroup(null);
           }}
         >
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editingGroup ? 'Edytuj grupę' : 'Nowa grupa'}</h2>
+          {formError && <div className="alert alert-error">{formError}</div>}
+          <div className="form">
+            <label className="form-label" htmlFor="group-name">
+              Nazwa grupy
+            </label>
+            <input
+              className="form-input"
+              id="group-name"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder="np. Laboratorium Fizyki"
+            />
+            <label className="form-label" htmlFor="group-permission">
+              Domyślne uprawnienie
+            </label>
+            <select
+              className="form-input"
+              id="group-permission"
+              value={formPermission}
+              onChange={(e) =>
+                setFormPermission(e.target.value as 'manage' | 'edit')
+              }
+            >
+              <option value="edit">Edycja</option>
+              <option value="manage">Zarządzanie</option>
+            </select>
+            <div className="form-actions">
               <button
-                className="modal-close"
-                onClick={() => {
-                  setShowCreateForm(false);
-                  setEditingGroup(null);
-                }}
+                className="btn btn-primary"
+                onClick={editingGroup ? handleUpdate : handleCreate}
+                disabled={formLoading || !formName.trim()}
+                type="button"
               >
-                <X size={18} />
+                {formLoading
+                  ? 'Zapisywanie…'
+                  : editingGroup
+                    ? 'Zapisz zmiany'
+                    : 'Utwórz'}
               </button>
             </div>
-            {formError && <div className="alert alert-error">{formError}</div>}
-            <div className="form">
-              <label className="form-label">Nazwa grupy</label>
-              <input
-                className="form-input"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="np. Laboratorium Fizyki"
-              />
-              <label className="form-label">Domyślne uprawnienie</label>
-              <select
-                className="form-input"
-                value={formPermission}
-                onChange={(e) =>
-                  setFormPermission(e.target.value as 'manage' | 'edit')
-                }
-              >
-                <option value="edit">Edycja</option>
-                <option value="manage">Zarządzanie</option>
-              </select>
-              <div className="form-actions">
-                <button
-                  className="btn btn-primary"
-                  onClick={editingGroup ? handleUpdate : handleCreate}
-                  disabled={formLoading || !formName.trim()}
-                >
-                  {formLoading
-                    ? 'Zapisywanie…'
-                    : editingGroup
-                      ? 'Zapisz zmiany'
-                      : 'Utwórz'}
-                </button>
-              </div>
-            </div>
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );

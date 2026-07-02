@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { useState, type ElementType } from 'react';
+import { useEffect, useState, type ElementType } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -108,19 +108,29 @@ export const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
 
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [sidebarOpen]);
+
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">
+        Przejdź do treści
+      </a>
       <button
         className="btn btn-ghost mobile-nav-toggle"
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        style={{
-          display: 'none',
-          position: 'fixed',
-          top: 12,
-          left: 12,
-          zIndex: 60,
-        }}
+        aria-controls="main-navigation"
+        aria-expanded={sidebarOpen}
         aria-label="Menu"
+        type="button"
       >
         <Menu size={20} />
       </button>
@@ -133,11 +143,15 @@ export const Layout = () => {
             background: 'rgba(0,0,0,0.5)',
             zIndex: 49,
           }}
+          aria-hidden="true"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside
+        className={`sidebar ${sidebarOpen ? 'open' : ''}`}
+        id="main-navigation"
+      >
         <Link
           to="/"
           className="sidebar-brand"
@@ -244,7 +258,7 @@ export const Layout = () => {
         </div>
       </aside>
 
-      <main className="main-content">
+      <main className="main-content" id="main-content" tabIndex={-1}>
         <Outlet />
       </main>
     </div>

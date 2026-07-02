@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useId } from 'react';
 import type { Category } from '../types/category';
 import { ChevronRight, ChevronLeft, Check } from 'lucide-react';
 
@@ -19,6 +19,7 @@ export default function CategoryDropdown({
   allowEmpty = true,
   emptyLabel = 'Brak',
 }: CategoryDropdownProps) {
+  const dropdownId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [currentParentId, setCurrentParentId] = useState<number | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -82,10 +83,19 @@ export default function CategoryDropdown({
     <div
       ref={wrapperRef}
       className="category-dropdown"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          setIsOpen(false);
+        }
+      }}
       style={{ position: 'relative', width: '100%' }}
     >
       <button
         type="button"
+        aria-controls={isOpen ? dropdownId : undefined}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
         className="form-input"
         style={{
           width: '100%',
@@ -110,6 +120,8 @@ export default function CategoryDropdown({
 
       {isOpen && (
         <div
+          id={dropdownId}
+          role="listbox"
           style={{
             position: 'absolute',
             top: '100%',
@@ -132,6 +144,7 @@ export default function CategoryDropdown({
               <button
                 type="button"
                 onClick={handleGoUp}
+                aria-label="Wróć do kategorii nadrzędnej"
                 style={{
                   width: '100%',
                   textAlign: 'left',
@@ -152,6 +165,8 @@ export default function CategoryDropdown({
               <button
                 type="button"
                 onClick={() => handleSelect(currentParentId)}
+                aria-selected={value === currentParentId}
+                role="option"
                 style={{
                   width: '100%',
                   textAlign: 'left',
@@ -185,6 +200,8 @@ export default function CategoryDropdown({
             <button
               type="button"
               onClick={() => handleSelect('')}
+              aria-selected={value === ''}
+              role="option"
               style={{
                 width: '100%',
                 textAlign: 'left',
@@ -237,6 +254,8 @@ export default function CategoryDropdown({
                   <button
                     type="button"
                     onClick={() => handleSelect(cat.id)}
+                    aria-selected={isSelected}
+                    role="option"
                     style={{
                       flex: 1,
                       textAlign: 'left',
@@ -264,6 +283,7 @@ export default function CategoryDropdown({
                     <button
                       type="button"
                       onClick={(e) => handleDrillDown(e, cat.id)}
+                      aria-label={`Pokaż podkategorie: ${cat.name}`}
                       style={{
                         padding: '8px 12px',
                         background: 'transparent',

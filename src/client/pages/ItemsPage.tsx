@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Trash2, X } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
+import Dialog from '../components/Dialog';
 import LeafletMap from '../components/LeafletMap';
 import { useAuth } from '../hooks/useAuth';
 import type { AuthUser } from '../services/authService';
@@ -588,10 +589,20 @@ export default function ItemsPage() {
                 paginatedItems.map((item) => (
                   <tr
                     key={item.id}
+                    aria-label={`Pokaż szczegóły przedmiotu ${item.name}`}
+                    aria-pressed={item.id === selectedItem?.id}
                     className={
                       item.id === selectedItem?.id ? 'row-selected' : ''
                     }
                     onClick={() => setSelectedItemId(item.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedItemId(item.id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                   >
                     <td className="td-name">{item.name}</td>
                     <td>{item.manufacturer}</td>
@@ -671,22 +682,13 @@ export default function ItemsPage() {
         </>
       )}
       {modal && (
-        <div className="modal-overlay" onClick={() => setModal(null)}>
-          <div
-            className="modal"
-            ref={modalRef}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-header">
-              <h2>
-                {modal.mode === 'create'
-                  ? 'Nowy przedmiot'
-                  : 'Edytuj przedmiot'}
-              </h2>
-              <button className="modal-close" onClick={() => setModal(null)}>
-                <X size={18} />
-              </button>
-            </div>
+        <Dialog
+          title={
+            modal.mode === 'create' ? 'Nowy przedmiot' : 'Edytuj przedmiot'
+          }
+          onClose={() => setModal(null)}
+        >
+          <div ref={modalRef}>
             {formError && <div className="alert alert-error">{formError}</div>}
             {modal.mode === 'create' ? (
               <CreateForm
@@ -712,7 +714,7 @@ export default function ItemsPage() {
               />
             )}
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );

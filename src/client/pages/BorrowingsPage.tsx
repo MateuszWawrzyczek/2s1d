@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import Dialog from '../components/Dialog';
 import { borrowingService } from '../services/borrowingService';
 import { itemService } from '../services/itemService';
 import { useAuth } from '../hooks/useAuth';
@@ -347,41 +347,33 @@ export default function BorrowingsPage() {
       )}
 
       {modal ? (
-        <div className="modal-overlay" onClick={() => setModal(null)}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{modalTitle(modal)}</h2>
-              <button className="modal-close" onClick={() => setModal(null)}>
-                <X size={18} />
-              </button>
-            </div>
-            {formError ? (
-              <div className="alert alert-error">{formError}</div>
-            ) : null}
-            {modal.mode === 'request' ? (
-              <BorrowingRequestForm
-                items={requestableItems}
-                loading={formLoading}
-                onSubmit={handleRequest}
-              />
-            ) : null}
-            {modal.mode === 'external' ? (
-              <ExternalBorrowingForm
-                items={externalBorrowingItems}
-                loading={formLoading}
-                onSubmit={handleExternal}
-              />
-            ) : null}
-            {modal.mode === 'return' ? (
-              <ReturnBorrowingForm
-                borrowing={modal.borrowing}
-                itemName={itemName(modal.borrowing.itemId)}
-                loading={formLoading}
-                onSubmit={(comment) => handleReturn(modal.borrowing, comment)}
-              />
-            ) : null}
-          </div>
-        </div>
+<Dialog title={modalTitle(modal)} onClose={() => setModal(null)}>
+  {formError ? (
+    <div className="alert alert-error">{formError}</div>
+  ) : null}
+  {modal.mode === 'request' ? (
+    <BorrowingRequestForm
+      items={requestableItems}
+      loading={formLoading}
+      onSubmit={handleRequest}
+    />
+  ) : null}
+  {modal.mode === 'external' ? (
+    <ExternalBorrowingForm
+      items={externalBorrowingItems}
+      loading={formLoading}
+      onSubmit={handleExternal}
+    />
+  ) : null}
+  {modal.mode === 'return' ? (
+    <ReturnBorrowingForm
+      borrowing={modal.borrowing}
+      itemName={itemName(modal.borrowing.itemId)}
+      loading={formLoading}
+      onSubmit={(comment) => handleReturn(modal.borrowing, comment)}
+    />
+  ) : null}
+</Dialog>
       ) : null}
     </div>
   );

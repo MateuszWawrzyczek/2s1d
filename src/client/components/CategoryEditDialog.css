@@ -16,6 +16,7 @@
 }
 .category-edit-dialog .dialog-header {
   padding: 20px 24px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
 }
 .category-edit-dialog .dialog-header h2 {
   margin: 0; font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.3px;
