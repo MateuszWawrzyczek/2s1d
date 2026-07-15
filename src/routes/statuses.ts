@@ -21,6 +21,7 @@ const createSchema = z.object({
     .min(1)
     .max(100)
     .transform((v) => v.trim()),
+  description: z.string().max(500).optional(),
 });
 
 const updateSchema = z.object({
@@ -29,6 +30,7 @@ const updateSchema = z.object({
     .min(1)
     .max(100)
     .transform((v) => v.trim()),
+  description: z.string().max(500).optional(),
 });
 
 const router = new Hono<{ Variables: Variables }>();
@@ -39,6 +41,8 @@ function toResponse(status: Status) {
     id: status.id,
     name: status.name,
     is_system: status.isSystem,
+    slug: status.slug,
+    description: status.description,
   };
 }
 
@@ -64,8 +68,6 @@ router.get('/', async (c) => {
 });
 
 router.post('/', zValidator('json', createSchema), async (c) => {
-  if (c.get('userRole') !== 'admin')
-    forbidden('Only admins can create statuses');
   const db = c.get('db');
   const body = c.req.valid('json');
   await checkNameUnique(db, body.name);
@@ -74,6 +76,7 @@ router.post('/', zValidator('json', createSchema), async (c) => {
     name: body.name,
     isSystem: false,
     slug: slugify(body.name),
+    description: body.description?.trim() || null,
   });
 
   const created = await db
@@ -85,8 +88,6 @@ router.post('/', zValidator('json', createSchema), async (c) => {
 });
 
 router.put('/:id', zValidator('json', updateSchema), async (c) => {
-  if (c.get('userRole') !== 'admin')
-    forbidden('Only admins can update statuses');
   const db = c.get('db');
   const id = Number(c.req.param('id'));
   const existing = await db
@@ -101,7 +102,11 @@ router.put('/:id', zValidator('json', updateSchema), async (c) => {
   await checkNameUnique(db, body.name, id);
   await db
     .update(itemStatus)
-    .set({ name: body.name, slug: slugify(body.name) })
+    .set({
+      name: body.name,
+      slug: slugify(body.name),
+      description: body.description?.trim() || null,
+    })
     .where(eq(itemStatus.id, id));
   const updated = await db
     .select()
@@ -112,8 +117,6 @@ router.put('/:id', zValidator('json', updateSchema), async (c) => {
 });
 
 router.delete('/:id', async (c) => {
-  if (c.get('userRole') !== 'admin')
-    forbidden('Only admins can delete statuses');
   const db = c.get('db');
   const id = Number(c.req.param('id'));
   const existing = await db

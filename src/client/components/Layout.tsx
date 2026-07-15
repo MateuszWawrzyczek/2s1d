@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { useState, type ElementType } from 'react';
+import { useEffect, useState, type ElementType } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -19,7 +19,10 @@ import {
   LogOut,
 } from 'lucide-react';
 import { authService } from '../services/authService';
+import { notificationService } from '../services/notificationService';
 import { useAuth } from '../hooks/useAuth';
+
+const NOTIFICATIONS_SEEN_AT_KEY = 'notifications-seen-at';
 
 interface NavItem {
   to: string;
@@ -106,21 +109,65 @@ const navItems: NavItem[] = [
 export const Layout = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) {
+      setNotificationCount(0);
+      return;
+    }
+    let cancelled = false;
+    const loadNotifications = async () => {
+      try {
+        const events = await notificationService.listEvents();
+        const seenAt = Date.parse(
+          window.localStorage.getItem(NOTIFICATIONS_SEEN_AT_KEY) ?? ''
+        );
+        const unread = events.filter(
+          (event) =>
+            !Number.isFinite(seenAt) || Date.parse(event.createdAt) > seenAt
+        ).length;
+        if (!cancelled) setNotificationCount(unread);
+      } catch {
+        if (!cancelled) setNotificationCount(0);
+      }
+    };
+    void loadNotifications();
+    const intervalId = window.setInterval(loadNotifications, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const closeSidebar = () => setSidebarOpen(false);
+  const markNotificationsSeen = () => {
+    window.localStorage.setItem(
+      NOTIFICATIONS_SEEN_AT_KEY,
+      new Date().toISOString()
+    );
+    setNotificationCount(0);
+    closeSidebar();
+  };
 
   return (
     <div className="app-shell">
       <button
         className="btn btn-ghost mobile-nav-toggle"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        style={{
-          display: 'none',
-          position: 'fixed',
-          top: 12,
-          left: 12,
-          zIndex: 60,
-        }}
+        onClick={() => setSidebarOpen((open) => !open)}
         aria-label="Menu"
+        aria-controls="main-navigation"
+        aria-expanded={sidebarOpen}
+        type="button"
       >
         <Menu size={20} />
       </button>
@@ -133,15 +180,18 @@ export const Layout = () => {
             background: 'rgba(0,0,0,0.5)',
             zIndex: 49,
           }}
-          onClick={() => setSidebarOpen(false)}
+          onClick={closeSidebar}
         />
       )}
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside
+        className={`sidebar ${sidebarOpen ? 'open' : ''}`}
+        id="main-navigation"
+      >
         <Link
           to="/"
           className="sidebar-brand"
-          onClick={() => setSidebarOpen(false)}
+          onClick={closeSidebar}
         >
           <div className="sidebar-brand-icon">SZ</div>
           <div className="sidebar-brand-text">
@@ -176,12 +226,24 @@ export const Layout = () => {
                     <Link
                       to={item.to}
                       className={`nav-link ${isActive ? 'active' : ''}`}
-                      onClick={() => setSidebarOpen(false)}
+                      onClick={
+                        item.to === '/notifications'
+                          ? markNotificationsSeen
+                          : closeSidebar
+                      }
                     >
                       <span className="nav-link-icon">
                         <item.icon size={18} />
                       </span>
                       {item.label}
+                      {item.to === '/notifications' && notificationCount > 0 ? (
+                        <span
+                          className="notification-badge"
+                          aria-label={`${notificationCount} nowych powiadomień`}
+                        >
+                          {notificationCount > 99 ? '99+' : notificationCount}
+                        </span>
+                      ) : null}
                     </Link>
                   </div>
                 </div>
@@ -197,7 +259,7 @@ export const Layout = () => {
                 style={{ marginBottom: 8, width: '100%', textAlign: 'left' }}
                 onClick={() => {
                   authService.logout();
-                  setSidebarOpen(false);
+                  closeSidebar();
                 }}
               >
                 <span className="nav-link-icon">
@@ -223,7 +285,7 @@ export const Layout = () => {
                 to="/login"
                 className="nav-link"
                 style={{ marginBottom: 8 }}
-                onClick={() => setSidebarOpen(false)}
+                onClick={closeSidebar}
               >
                 <span className="nav-link-icon">
                   <LogIn size={18} />

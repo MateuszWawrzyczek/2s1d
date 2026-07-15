@@ -271,17 +271,22 @@ router.post('/', zValidator('json', createSchema), async (c) => {
   const plannedReturnAt = new Date(body.plannedReturnAt);
   if (plannedReturnAt.getTime() <= Date.now())
     badRequest('Planned return date must be in the future');
+  const unavailableStatuses =
+    body.mode === 'external'
+      ? (['pending', 'reserved', 'borrowed'] as const)
+      : (['reserved', 'borrowed'] as const);
   const active = await db
     .select()
     .from(borrowings)
     .where(
       and(
         eq(borrowings.itemId, body.itemId),
-        inArray(borrowings.status, ['pending', 'reserved', 'borrowed'])
+        inArray(borrowings.status, unavailableStatuses)
       )
     )
     .limit(1);
-  if (active.length > 0) badRequest('Item is already borrowed');
+  if (active.length > 0)
+    badRequest('Przedmiot jest już zarezerwowany albo wypożyczony');
   const values: Record<string, unknown> = {
     itemId: body.itemId,
     borrowerId:

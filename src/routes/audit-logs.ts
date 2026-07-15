@@ -14,6 +14,26 @@ type Variables = {
 const router = new Hono<{ Variables: Variables; Bindings: Env }>();
 router.use('/*', authMiddleware);
 
+router.get('/recent', async (c) => {
+  const db = c.get('db');
+  const rows = await db
+    .select({
+      id: auditLogs.id,
+      timestamp: auditLogs.timestamp,
+      action: auditLogs.action,
+      itemId: auditLogs.itemId,
+      userEmail: users.email,
+      itemName: items.name,
+      itemSystemId: items.systemId,
+    })
+    .from(auditLogs)
+    .leftJoin(users, eq(auditLogs.userId, users.id))
+    .leftJoin(items, eq(auditLogs.itemId, items.id))
+    .orderBy(desc(auditLogs.timestamp))
+    .limit(5);
+  return c.json(rows);
+});
+
 router.get('/', async (c) => {
   const db = c.get('db');
   if (c.get('userRole') !== 'admin')

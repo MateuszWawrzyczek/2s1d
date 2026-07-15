@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Trash2, X } from 'lucide-react';
 import LeafletMap from '../components/LeafletMap';
 import { useAuth } from '../hooks/useAuth';
@@ -9,9 +10,6 @@ import {
 } from '../services/itemService';
 import { itemPhotoService, type ItemPhoto } from '../services/itemPhotoService';
 import { delegationService } from '../services/delegationService';
-import Autocomplete, {
-  type AutocompleteOption,
-} from '../components/Autocomplete';
 import CategoryDropdown from '../components/CategoryDropdown';
 import type { Item, CreateItemPayload } from '../types/item';
 import type { Category } from '../types/category';
@@ -24,7 +22,6 @@ import type {
   CreateDelegationPayload,
   PermissionLevel,
 } from '../types/delegation';
-import { jsonAuthHeaders } from '../services/authHeaders';
 
 interface ModalState {
   mode: 'create' | 'edit';
@@ -45,6 +42,8 @@ type SortDirection = 'asc' | 'desc';
 const PAGE_SIZE = 5;
 
 export default function ItemsPage() {
+  const [searchParams] = useSearchParams();
+  const requestedItemId = Number(searchParams.get('itemId'));
   const [items, setItems] = useState<Item[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -121,6 +120,13 @@ export default function ItemsPage() {
   useEffect(() => {
     void fetchItems();
   }, [fetchItems]);
+
+  useEffect(() => {
+    if (requestedItemId <= 0 || !items.some((item) => item.id === requestedItemId)) return;
+    setSelectedItemId(requestedItemId);
+    const itemIndex = items.findIndex((item) => item.id === requestedItemId);
+    if (itemIndex >= 0) setPage(Math.floor(itemIndex / PAGE_SIZE) + 1);
+  }, [items, requestedItemId]);
 
   const handleCreate = async (payload: CreateItemPayload) => {
     setFormLoading(true);
@@ -288,7 +294,12 @@ export default function ItemsPage() {
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE
   );
+  const requestedItem =
+    requestedItemId > 0
+      ? items.find((item) => item.id === requestedItemId)
+      : undefined;
   const selectedItem =
+    requestedItem ??
     filteredItems.find((item) => item.id === selectedItemId) ??
     filteredItems[0] ??
     items[0];
@@ -356,7 +367,7 @@ export default function ItemsPage() {
     try {
       await itemPhotoService.upload(selectedItem.id, file);
       setPhotos(await itemPhotoService.list(selectedItem.id));
-      setSuccessMessage('Zdjęcie zostało dodane.');
+      setSuccessMessage('Plik został dodany.');
     } catch (err) {
       setPhotoError(
         err instanceof Error ? err.message : 'Nie udało się dodać zdjęcia.'
@@ -609,6 +620,8 @@ export default function ItemsPage() {
               <ItemDelegationsPanel
                 item={selectedItem}
                 delegations={itemDelegations}
+                owners={owners}
+                groups={groups}
                 canManage={canManageLocation}
                 onCreate={handleCreateDelegation}
                 onUpdate={handleUpdateDelegation}
@@ -1189,6 +1202,12 @@ function formatLocationDetails(location: Location | undefined): string {
   );
 }
 
+function toDateInputValue(value: string | undefined): string {
+  if (!value) return '';
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? '';
+}
+
 function ItemPhotosPanel({
   item,
   photos: itemPhotos,
@@ -1205,13 +1224,12 @@ function ItemPhotosPanel({
   return (
     <section className="photos-panel">
       <div>
-        <p className="location-panel__label">Dokumentacja zdjęciowa</p>
+        <p className="location-panel__label">Dokumentacja</p>
         <h2>{item.name}</h2>
       </div>
       <label className="btn btn-secondary photos-upload">
-        Dodaj zdjęcie
+        Dodaj plik
         <input
-          accept="image/*"
           type="file"
           onChange={(event) => {
             const file = event.target.files?.[0];
@@ -1226,7 +1244,7 @@ function ItemPhotosPanel({
       {photosLoading ? (
         <div className="loading-state">
           <div className="spinner" />
-          Ładowanie zdjęć...
+          Ładowanie dokumentacji...
         </div>
       ) : (
         <table className="table photos-table">
@@ -1267,6 +1285,8 @@ function ItemPhotosPanel({
 function ItemDelegationsPanel({
   item,
   delegations,
+  owners,
+  groups,
   canManage,
   onCreate,
   onUpdate,
@@ -1274,6 +1294,8 @@ function ItemDelegationsPanel({
 }: {
   item: Item;
   delegations: Delegation[];
+  owners: Owner[];
+  groups: Group[];
   canManage: boolean;
   onCreate: (payload: CreateDelegationPayload) => void;
   onUpdate: (id: number, payload: CreateDelegationPayload) => void;
@@ -1359,6 +1381,8 @@ function ItemDelegationsPanel({
                 : undefined
             }
             onSubmit={editingId ? handleUpdate : handleCreate}
+            owners={owners}
+            groups={groups}
           />
         </div>
       )}
@@ -1433,111 +1457,94 @@ function ItemDelegationsPanel({
 function CreateDelegationForm({
   initial,
   onSubmit,
+  owners,
+  groups,
 }: {
   initial?: Delegation;
   onSubmit: (p: CreateDelegationPayload) => void;
+  owners: Owner[];
+  groups: Group[];
 }) {
-  const [selectedUser, setSelectedUser] = useState<AutocompleteOption | null>(
-    initial?.user_id
-      ? { value: initial.user_id, label: initial.user_email || '' }
-      : null
+  const [selectedUserId, setSelectedUserId] = useState<number | ''>(
+    initial?.user_id ?? ''
   );
-  const [selectedGroup, setSelectedGroup] = useState<AutocompleteOption | null>(
-    initial?.group_id
-      ? { value: initial.group_id, label: initial.group_name || '' }
-      : null
-  );
-  const [customGroupName, setCustomGroupName] = useState(
-    initial?.group_name || ''
+  const [selectedGroupId, setSelectedGroupId] = useState<number | ''>(
+    initial?.group_id ?? ''
   );
   const [permission, setPermission] = useState<PermissionLevel>(
     initial?.permission || 'edit'
   );
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const isExistingGroupSelected = !!selectedGroup;
+  const isExistingGroupSelected = selectedGroupId !== '';
 
-  const handleGroupSelect = (opt: AutocompleteOption) => {
-    setSelectedGroup(opt);
-    setCustomGroupName(opt.label);
-    if (opt.extra?.defaultPermission) {
-      setPermission(opt.extra.defaultPermission);
+  const submit = () => {
+    setError(null);
+    if (selectedUserId === '' && selectedGroupId === '') {
+      setError('Wybierz użytkownika albo grupę.');
+      return;
     }
-  };
-
-  const submit = async () => {
-    if (!selectedUser && !selectedGroup && !customGroupName.trim()) return;
-
-    setIsCreatingGroup(true);
-    try {
-      let groupId = selectedGroup?.value;
-
-      // If typing a new name, create the group with the currently selected permission
-      if (customGroupName.trim() && !groupId) {
-        const group = await delegationService.searchAndCreateGroup(
-          customGroupName.trim(),
-          permission
-        );
-        groupId = group.value;
-      }
-
-      // If both user and group are provided, sync membership
-      if (selectedUser && groupId) {
-        try {
-          await fetch(`/api/v1/groups/${groupId}/members`, {
-            method: 'POST',
-            headers: jsonAuthHeaders(),
-            body: JSON.stringify({ userId: selectedUser.value, permission }),
-          });
-        } catch (e) {
-          console.warn('Membership sync failed, but proceeding.', e);
-        }
-      }
-
-      onSubmit({
-        user_id: selectedUser?.value,
-        group_id: groupId,
-        permission,
-      });
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Błąd zapisu delegacji.');
-    } finally {
-      setIsCreatingGroup(false);
-    }
+    onSubmit({
+      user_id: selectedUserId === '' ? undefined : selectedUserId,
+      group_id: selectedGroupId === '' ? undefined : selectedGroupId,
+      permission,
+    });
   };
 
   return (
     <div className="form">
+      {error ? <div className="alert alert-error">{error}</div> : null}
       <div
         style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}
       >
         <div>
-          <label className="form-label">Użytkownik (email)</label>
-          <Autocomplete
-            placeholder="Wpisz email..."
-            onSearch={(q) => delegationService.searchUsers(q)}
-            onSelect={(opt) => setSelectedUser(opt)}
-            onClear={() => setSelectedUser(null)}
-            initialValue={initial?.user_email || ''}
+          <label className="form-label" htmlFor="delegation-user">
+            Użytkownik
+          </label>
+          <select
+            className="form-input"
+            id="delegation-user"
+            value={selectedUserId}
             disabled={!!initial}
-          />
+            onChange={(event) => {
+              const value = event.target.value;
+              setSelectedUserId(value ? Number(value) : '');
+              if (value) setSelectedGroupId('');
+            }}
+          >
+            <option value="">Wybierz użytkownika</option>
+            {owners.map((owner) => (
+              <option key={owner.id} value={owner.id}>
+                {owner.fullName}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
-          <label className="form-label">Lub grupa</label>
-          <Autocomplete
-            placeholder="Wpisz nazwę grupy..."
-            onSearch={(q) => {
-              setCustomGroupName(q);
-              return delegationService.searchGroups(q);
+          <label className="form-label" htmlFor="delegation-group">
+            Grupa
+          </label>
+          <select
+            className="form-input"
+            id="delegation-group"
+            value={selectedGroupId}
+            disabled={!!initial}
+            onChange={(event) => {
+              const value = event.target.value;
+              const groupId = value ? Number(value) : '';
+              setSelectedGroupId(groupId);
+              if (value) {
+                setSelectedUserId('');
+              }
             }}
-            onSelect={handleGroupSelect}
-            onClear={() => {
-              setSelectedGroup(null);
-              setCustomGroupName('');
-            }}
-            initialValue={initial?.group_name || ''}
-            disabled={false}
-          />
+          >
+            <option value="">Wybierz grupę</option>
+            {groups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -1563,16 +1570,9 @@ function CreateDelegationForm({
         <button
           className="btn btn-primary"
           onClick={submit}
-          disabled={
-            isCreatingGroup ||
-            (!selectedUser && !selectedGroup && !customGroupName.trim())
-          }
+          disabled={selectedUserId === '' && selectedGroupId === ''}
         >
-          {isCreatingGroup
-            ? 'Zapisywanie...'
-            : initial
-              ? 'Zapisz zmiany'
-              : 'Dodaj delegację'}
+          {initial ? 'Zapisz zmiany' : 'Dodaj delegację'}
         </button>
       </div>
     </div>
@@ -1845,7 +1845,9 @@ function EditForm({
     item.inventoryNumber ?? ''
   );
   const [description, setDescription] = useState(item.description ?? '');
-  const [purchaseDate, setPurchaseDate] = useState(item.purchaseDate ?? '');
+  const [purchaseDate, setPurchaseDate] = useState(
+    toDateInputValue(item.purchaseDate)
+  );
   const [categoryId, setCategoryId] = useState(
     item.categoryId ?? categories[0]?.id ?? 1
   );
@@ -1874,7 +1876,7 @@ function EditForm({
     setSerial(item.serial ?? '');
     setInventoryNumber(item.inventoryNumber ?? '');
     setDescription(item.description ?? '');
-    setPurchaseDate(item.purchaseDate ?? '');
+    setPurchaseDate(toDateInputValue(item.purchaseDate));
     setCategoryId(item.categoryId ?? categories[0]?.id ?? 1);
     setStatusId(item.statusId ?? statuses[0]?.id ?? 1);
     setOwnerId(item.ownerId ?? owners[0]?.id ?? 1);

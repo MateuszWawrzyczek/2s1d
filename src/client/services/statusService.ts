@@ -12,16 +12,21 @@ interface BackendStatusResponse {
   id: number;
   name: string;
   is_system: boolean;
+  slug?: string | null;
+  description?: string | null;
 }
 
 const mapBackend = (b: BackendStatusResponse): Status => ({
   id: b.id,
   name: b.name,
-  slug: b.name
-    .toLowerCase()
-    .replace(/\s+/g, '_')
-    .replace(/[^a-z0-9_]/g, ''),
+  slug:
+    b.slug ??
+    b.name
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, ''),
   type: b.is_system ? 'system' : 'custom',
+  description: b.description ?? undefined,
 });
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -111,7 +116,10 @@ export const statusService = {
     const response = await fetch(`${API_BASE}/`, {
       method: 'POST',
       headers: jsonAuthHeaders(),
-      body: JSON.stringify({ name: payload.name }),
+      body: JSON.stringify({
+        name: payload.name,
+        description: payload.description?.trim() || undefined,
+      }),
     });
     if (!response.ok) await handleApiError(response);
     return mapBackend((await response.json()) as BackendStatusResponse);
@@ -139,7 +147,10 @@ export const statusService = {
     const response = await fetch(`${API_BASE}/${id}`, {
       method: 'PUT',
       headers: jsonAuthHeaders(),
-      body: JSON.stringify({ name: payload.name }),
+      body: JSON.stringify({
+        name: payload.name,
+        description: payload.description?.trim() || undefined,
+      }),
     });
     if (!response.ok) await handleApiError(response);
     return mapBackend((await response.json()) as BackendStatusResponse);

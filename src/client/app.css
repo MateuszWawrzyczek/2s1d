@@ -210,6 +210,21 @@ a:hover {
   opacity: 1;
 }
 
+.notification-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--danger, #dc2626);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .sidebar-footer {
   margin-top: auto;
   padding: 16px 18px;
@@ -1385,6 +1400,36 @@ select.form-input {
   max-width: 320px;
   margin: 0 auto;
   line-height: 1.6;
+}
+
+.activity-list {
+  display: grid;
+  gap: 8px;
+}
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.activity-row-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 50%;
+  color: var(--accent);
+  background: var(--accent-muted);
+}
+.activity-row time {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 /* ============ Responsive ============ */

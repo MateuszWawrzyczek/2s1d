@@ -258,15 +258,24 @@ export const itemService = {
     const r = await fetch('/api/v1/item-status/', { headers: authHeaders() });
     await ensureOk(r);
     return (
-      (await r.json()) as { id: number; name: string; is_system: boolean }[]
+      (await r.json()) as {
+        id: number;
+        name: string;
+        is_system: boolean;
+        slug?: string | null;
+        description?: string | null;
+      }[]
     ).map((s) => ({
       id: s.id,
       name: s.name,
-      slug: s.name
-        .toLowerCase()
-        .replace(/\s+/g, '_')
-        .replace(/[^a-z0-9_]/g, ''),
+      slug:
+        s.slug ??
+        s.name
+          .toLowerCase()
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_]/g, ''),
       type: s.is_system ? 'system' : 'custom',
+      description: s.description ?? undefined,
     }));
   },
   async createLocation(payload: CreateLocationPayload): Promise<Location> {

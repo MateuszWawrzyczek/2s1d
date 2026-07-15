@@ -37,11 +37,14 @@ export default function DelegationsPage() {
       )
     )
       return;
+    setError(null);
     try {
       await delegationService.removeGlobal(delegation.id);
       await fetchDelegations();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Nie udało się usunąć delegacji.');
+      setError(
+        e instanceof Error ? e.message : 'Nie udało się usunąć delegacji.'
+      );
     }
   };
 

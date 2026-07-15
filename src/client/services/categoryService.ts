@@ -108,7 +108,18 @@ export const categoryService = {
       return;
     }
     await delay(300);
-    mock = mock.filter((c) => c.id !== id);
+    const ids = new Set<number>([id]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const category of mock) {
+        if (category.parentId !== null && ids.has(category.parentId) && !ids.has(category.id)) {
+          ids.add(category.id);
+          changed = true;
+        }
+      }
+    }
+    mock = mock.filter((c) => !ids.has(c.id));
   },
 };
 

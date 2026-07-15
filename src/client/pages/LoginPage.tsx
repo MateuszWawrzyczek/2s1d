@@ -40,7 +40,9 @@ export default function LoginPage() {
   const [loginPassword, setLoginPassword] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
   const [registrationMessage, setRegistrationMessage] = useState<string | null>(
     null
   );
@@ -61,19 +63,19 @@ export default function LoginPage() {
         setDevBypassAuth(cfg.devBypassAuth);
         setGoogleClientId(cfg.googleClientId);
       })
-      .catch(() => setError('Nie udało się pobrać konfiguracji logowania.'))
+      .catch(() => setConfigError('Nie udało się pobrać konfiguracji logowania.'))
       .finally(() => setIsConfigLoading(false));
   }, []);
 
   // ── Google Sign-In callback ──────────────────────────────────────────────
 
   const handleGoogleCredential = useCallback(async (credential: string) => {
-    setError(null);
+    setGoogleError(null);
     setIsSubmitting(true);
     try {
       await authService.googleLogin(credential);
     } catch (err) {
-      setError(
+      setGoogleError(
         err instanceof Error
           ? err.message
           : 'Nie udało się zalogować przez Google.'
@@ -153,7 +155,7 @@ export default function LoginPage() {
 
   async function handleRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    setRegisterError(null);
     setRegistrationMessage(null);
     setIsRegistering(true);
     try {
@@ -165,7 +167,7 @@ export default function LoginPage() {
       setRegisterEmail('');
       setRegisterPassword('');
     } catch (err) {
-      setError(
+      setRegisterError(
         err instanceof Error ? err.message : 'Nie udało się zarejestrować.'
       );
     } finally {
@@ -175,12 +177,12 @@ export default function LoginPage() {
 
   async function handleLocalLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    setLoginError(null);
     setIsSubmitting(true);
     try {
       await authService.login({ email: loginEmail, password: loginPassword });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nie udało się zalogować.');
+      setLoginError(err instanceof Error ? err.message : 'Nie udało się zalogować.');
     } finally {
       setIsSubmitting(false);
     }
@@ -188,14 +190,14 @@ export default function LoginPage() {
 
   async function handleDevBypassSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    setLoginError(null);
     setIsSubmitting(true);
     try {
       // In dev bypass mode, we send the email as credential
       await authService.googleLogin(devEmail);
       setDevEmail('');
     } catch (err) {
-      setError(
+      setLoginError(
         err instanceof Error
           ? err.message
           : 'Nie udało się zalogować przez dev bypass.'
@@ -215,24 +217,16 @@ export default function LoginPage() {
         <p className="login-copy">
           Zaloguj się przez AGH Google SSO albo użyj konta developerskiego.
         </p>
+        <p className="login-copy">Wymagane logowanie</p>
       </div>
-
-      {error && (
-        <div
-          className="login-panel"
-          style={{ borderColor: 'var(--color-error, #d32f2f)' }}
-        >
-          <div className="alert alert-error" style={{ margin: 0 }}>
-            {error}
-          </div>
-        </div>
-      )}
 
       {/* ── Google Sign-In (production) ─────────────────────────────────── */}
       {!devBypassAuth && (
         <div className="login-panel">
           <h2>AGH Google SSO</h2>
-          {isConfigLoading ? (
+          {configError ? (
+            <div className="alert alert-error">{configError}</div>
+          ) : isConfigLoading ? (
             <p className="login-copy">Pobieranie konfiguracji logowania...</p>
           ) : googleClientId ? (
             <>
@@ -289,6 +283,7 @@ export default function LoginPage() {
                 {isSubmitting ? 'Logowanie...' : 'Zaloguj (dev bypass)'}
               </button>
             </div>
+            {loginError ? <div className="alert alert-error">{loginError}</div> : null}
           </form>
         </div>
       )}
@@ -297,6 +292,7 @@ export default function LoginPage() {
       <div className="login-panel">
         <form className="form" onSubmit={handleLocalLogin}>
           <h2>Logowanie e-mailem</h2>
+          {loginError ? <div className="alert alert-error">{loginError}</div> : null}
           <label className="form-label" htmlFor="login-email">
             E-mail
           </label>
@@ -336,6 +332,7 @@ export default function LoginPage() {
       <div className="login-panel">
         <form className="form" onSubmit={handleRegister}>
           <h2>Rejestracja</h2>
+          {registerError ? <div className="alert alert-error">{registerError}</div> : null}
           <label className="form-label" htmlFor="register-email">
             E-mail
           </label>
