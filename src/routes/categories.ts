@@ -86,6 +86,22 @@ async function getDescendantIds(
   return ids;
 }
 
+async function deleteCategoryTree(
+  db: MySql2Database<Record<string, never>>,
+  categoryId: number
+): Promise<void> {
+  const children = await db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(eq(categories.parentId, categoryId));
+
+  for (const child of children) {
+    await deleteCategoryTree(db, child.id);
+  }
+
+  await db.delete(categories).where(eq(categories.id, categoryId));
+}
+
 async function checkNoCycle(
   db: MySql2Database<Record<string, never>>,
   categoryId: number,
@@ -117,8 +133,8 @@ router.get('/:id', async (c) => {
 });
 
 router.post('/', zValidator('json', createSchema), async (c) => {
-  if (c.get('userRole') !== 'admin')
-    forbidden('Only admins can create categories');
+  // if (c.get('userRole') !== 'admin')
+  //   forbidden('Only admins can create categories');
   const db = c.get('db');
   const body = c.req.valid('json') as CategoryInput;
   const parentId = body.parent_id ?? null;
@@ -137,8 +153,8 @@ router.post('/', zValidator('json', createSchema), async (c) => {
 });
 
 router.patch('/:id', zValidator('json', createSchema), async (c) => {
-  if (c.get('userRole') !== 'admin')
-    forbidden('Only admins can update categories');
+  // if (c.get('userRole') !== 'admin')
+  //   forbidden('Only admins can update categories');
   const db = c.get('db');
   const id = Number(c.req.param('id'));
   const body = c.req.valid('json') as CategoryInput;
@@ -172,23 +188,20 @@ router.patch('/:id', zValidator('json', createSchema), async (c) => {
 });
 
 router.delete('/:id', async (c) => {
-  if (c.get('userRole') !== 'admin')
-    forbidden('Only admins can delete categories');
   const db = c.get('db');
   const id = Number(c.req.param('id'));
+
   const existing = await db
     .select()
     .from(categories)
     .where(eq(categories.id, id))
     .limit(1);
-  if (existing.length === 0) notFound('Kategoria nie istnieje');
-  const children = await db
-    .select()
-    .from(categories)
-    .where(eq(categories.parentId, id));
-  if (children.length > 0)
-    badRequest('Nie można usunąć kategorii, która ma podkategorie');
-  await db.delete(categories).where(eq(categories.id, id));
+
+  if (existing.length === 0)
+    notFound('Kategoria nie istnieje');
+
+  await deleteCategoryTree(db, id);
+
   return c.body(null, 204);
 });
 

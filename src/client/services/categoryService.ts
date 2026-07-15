@@ -107,9 +107,25 @@ export const categoryService = {
       await handleResponse(r);
       return;
     }
+
     await delay(300);
-    mock = mock.filter((c) => c.id !== id);
-  },
+
+    const idsToRemove = new Set<number>();
+
+    const collectChildren = (parentId: number) => {
+      mock
+        .filter((c) => c.parentId === parentId)
+        .forEach((child) => {
+          idsToRemove.add(child.id);
+          collectChildren(child.id);
+        });
+    };
+
+    idsToRemove.add(id);
+    collectChildren(id);
+
+    mock = mock.filter((c) => !idsToRemove.has(c.id));
+  }
 };
 
 function mapCat(c: BackendCat): Category {

@@ -47,13 +47,14 @@ export default function UsersPage() {
   }, []);
 
   const handleDeactivate = async (id: number, email: string) => {
+    setError(null);
     if (!window.confirm(`Dezaktywować konto użytkownika ${email}?`)) return;
     setActionLoading(id);
     try {
       const updated = await userService.deactivate(id);
       setUsers(users.map((u) => (u.id === id ? updated : u)));
     } catch (err) {
-      alert(
+      setError(
         err instanceof Error
           ? err.message
           : 'Błąd podczas dezaktywacji użytkownika.'
@@ -64,12 +65,13 @@ export default function UsersPage() {
   };
 
   const handleActivate = async (id: number) => {
+    setError(null);
     setActionLoading(id);
     try {
       const updated = await userService.activate(id);
       setUsers(users.map((u) => (u.id === id ? updated : u)));
     } catch (err) {
-      alert(
+      setError(
         err instanceof Error
           ? err.message
           : 'Błąd podczas aktywacji użytkownika.'
@@ -80,6 +82,7 @@ export default function UsersPage() {
   };
 
   const handleSetRole = async (id: number, role: 'admin' | 'user') => {
+    setError(null);
     const confirmMsg = `Czy na pewno chcesz ustawić rolę użytkownika na "${roleLabels[role]}"?`;
     if (!window.confirm(confirmMsg)) return;
 
@@ -88,7 +91,9 @@ export default function UsersPage() {
       const updated = await userService.updateRole(id, role);
       setUsers(users.map((u) => (u.id === id ? updated : u)));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Błąd podczas zmiany roli.');
+      setError(
+        err instanceof Error ? err.message : 'Błąd podczas zmiany roli.'
+      );
     } finally {
       setActionLoading(null);
     }

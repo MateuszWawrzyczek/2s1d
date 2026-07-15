@@ -66,6 +66,7 @@ const navItems: NavItem[] = [
     label: 'Import Excel',
     icon: FileSpreadsheet,
     requiresAuth: true,
+    requiresAdmin: true,
   },
   {
     to: '/reports/overdue',
@@ -207,8 +208,7 @@ export const Layout = () => {
           {user ? (
             <>
               <button
-                className="nav-link"
-                style={{ marginBottom: 8, width: '100%', textAlign: 'left' }}
+                className="sidebar-logout"
                 onClick={() => {
                   authService.logout();
                   setSidebarOpen(false);

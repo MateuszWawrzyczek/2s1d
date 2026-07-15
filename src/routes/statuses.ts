@@ -64,8 +64,8 @@ router.get('/', async (c) => {
 });
 
 router.post('/', zValidator('json', createSchema), async (c) => {
-  if (c.get('userRole') !== 'admin')
-    forbidden('Only admins can create statuses');
+  // if (c.get('userRole') !== 'admin')
+  //   forbidden('Only admins can create statuses');
   const db = c.get('db');
   const body = c.req.valid('json');
   await checkNameUnique(db, body.name);
@@ -85,8 +85,8 @@ router.post('/', zValidator('json', createSchema), async (c) => {
 });
 
 router.put('/:id', zValidator('json', updateSchema), async (c) => {
-  if (c.get('userRole') !== 'admin')
-    forbidden('Only admins can update statuses');
+  // if (c.get('userRole') !== 'admin')
+  //   forbidden('Only admins can update statuses');
   const db = c.get('db');
   const id = Number(c.req.param('id'));
   const existing = await db
@@ -112,8 +112,8 @@ router.put('/:id', zValidator('json', updateSchema), async (c) => {
 });
 
 router.delete('/:id', async (c) => {
-  if (c.get('userRole') !== 'admin')
-    forbidden('Only admins can delete statuses');
+  // if (c.get('userRole') !== 'admin')
+  //   forbidden('Only admins can delete statuses');
   const db = c.get('db');
   const id = Number(c.req.param('id'));
   const existing = await db

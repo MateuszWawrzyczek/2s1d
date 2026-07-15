@@ -317,7 +317,7 @@ export default function ItemsPage() {
           setPhotoError(
             err instanceof Error
               ? err.message
-              : 'Nie udało się pobrać historii zdjęć.'
+              : 'Nie udało się pobrać historii plików.'
           );
         }
       } finally {
@@ -376,10 +376,10 @@ export default function ItemsPage() {
     try {
       await itemPhotoService.upload(selectedItem.id, file);
       setPhotos(await itemPhotoService.list(selectedItem.id));
-      setSuccessMessage('Zdjęcie zostało dodane.');
+      setSuccessMessage('Plik został dodany.');
     } catch (err) {
       setPhotoError(
-        err instanceof Error ? err.message : 'Nie udało się dodać zdjęcia.'
+        err instanceof Error ? err.message : 'Nie udało się dodać pliku.'
       );
     } finally {
       setPhotoLoading(false);
@@ -1460,13 +1460,12 @@ function ItemPhotosPanel({
   return (
     <section className="photos-panel">
       <div>
-        <p className="location-panel__label">Dokumentacja zdjęciowa</p>
+        <p className="location-panel__label">Dokumentacja</p>
         <h2>{item.name}</h2>
       </div>
       <label className="btn btn-secondary photos-upload">
-        Dodaj zdjęcie
+        Dodaj plik
         <input
-          accept="image/*"
           type="file"
           onChange={(event) => {
             const file = event.target.files?.[0];
@@ -1481,7 +1480,7 @@ function ItemPhotosPanel({
       {photosLoading ? (
         <div className="loading-state">
           <div className="spinner" />
-          Ładowanie zdjęć...
+          Ładowanie plików...
         </div>
       ) : (
         <table className="table photos-table">
@@ -1496,7 +1495,7 @@ function ItemPhotosPanel({
           <tbody>
             {itemPhotos.length === 0 ? (
               <tr>
-                <td colSpan={4}>Brak zdjęć dla tego przedmiotu.</td>
+                <td colSpan={4}>Brak plików dla tego przedmiotu.</td>
               </tr>
             ) : (
               itemPhotos.map((photo) => (
@@ -1715,6 +1714,7 @@ function CreateDelegationForm({
     initial?.permission || 'edit'
   );
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const isExistingGroupSelected = !!selectedGroup;
 
@@ -1728,7 +1728,7 @@ function CreateDelegationForm({
 
   const submit = async () => {
     if (!selectedUser && !selectedGroup && !customGroupName.trim()) return;
-
+    setError(null);
     setIsCreatingGroup(true);
     try {
       let groupId = selectedGroup?.value;
@@ -1761,7 +1761,11 @@ function CreateDelegationForm({
         permission,
       });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Błąd zapisu delegacji.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Błąd zapisu delegacji.'
+      );
     } finally {
       setIsCreatingGroup(false);
     }
@@ -1819,7 +1823,7 @@ function CreateDelegationForm({
         <option value="edit">Edycja (tylko szczegóły)</option>
         <option value="manage">Zarządzanie (szczegóły + lokalizacja)</option>
       </select>
-
+      {error && <div className="alert alert-error">{error}</div>}
       <div style={{ marginTop: '16px' }}>
         <button
           className="btn btn-primary"

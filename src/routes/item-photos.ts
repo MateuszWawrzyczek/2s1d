@@ -16,7 +16,7 @@ type Variables = {
 const router = new Hono<{ Variables: Variables; Bindings: Env }>();
 router.use('/*', authMiddleware);
 
-const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = new Set([
   'image/jpeg',
   'image/png',
@@ -98,19 +98,14 @@ router.post('/:itemId/photos', async (c) => {
   const candidate = formData.get('file');
   if (!(candidate instanceof File)) badRequest('Nie przesłano pliku');
   const file = candidate;
-  if (file.size === 0 || file.size > MAX_PHOTO_BYTES)
-    badRequest('Zdjęcie musi mieć od 1 bajta do 10 MB');
-  if (!ALLOWED_PHOTO_TYPES.has(file.type))
-    badRequest('Dozwolone są tylko zdjęcia JPEG, PNG, WebP i GIF');
+  if (file.size === 0 || file.size > MAX_FILE_BYTES)
+    badRequest('Plik musi mieć od 1 bajta do 25 MB');
+  
 
-  const extensionByType: Record<string, string> = {
-    'image/jpeg': 'jpg',
-    'image/png': 'png',
-    'image/webp': 'webp',
-    'image/gif': 'gif',
-  };
-  const ext = extensionByType[file.type];
-  const storagePath = `items/${itemId}/${crypto.randomUUID()}.${ext}`;
+  const originalExt = file.name.split('.').pop()?.toLowerCase() || 'bin';
+  const safeExt = originalExt.replace(/[^a-z0-9]/g, '').slice(0, 10) || 'bin';
+
+  const storagePath = `items/${itemId}/${crypto.randomUUID()}.${safeExt}`;
   await storage.put(storagePath, file.stream(), {
     contentType: file.type || 'application/octet-stream',
   });

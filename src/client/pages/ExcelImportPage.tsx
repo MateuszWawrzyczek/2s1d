@@ -54,13 +54,22 @@ export default function ExcelImportPage() {
           <label className="form-label" htmlFor="excel-file">
             Plik .xlsx
           </label>
-          <input
-            className="form-input"
-            id="excel-file"
-            type="file"
-            accept=".xlsx"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          />
+          <label className="file-upload" htmlFor="excel-file">
+            <span className="btn btn-secondary">
+              Wybierz plik .xlsx
+            </span>
+
+            <span className="file-upload-name">
+              {file ? file.name : 'Nie wybrano pliku'}
+            </span>
+
+            <input
+              id="excel-file"
+              type="file"
+              accept=".xlsx"
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            />
+          </label>
           <fieldset className="import-mapping">
             <legend>Mapowanie kolumn</legend>
             {Object.entries(columnMapping).map(([field, column]) => (

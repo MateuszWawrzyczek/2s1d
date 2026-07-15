@@ -70,7 +70,9 @@ export default function StatusesPage() {
       await statusService.remove(status.id);
       await fetchStatuses();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Nie udało się usunąć statusu.');
+      setError(
+        e instanceof Error ? e.message : 'Nie udało się usunąć statusu.'
+      );
     }
   };
   const openCreate = () => {
