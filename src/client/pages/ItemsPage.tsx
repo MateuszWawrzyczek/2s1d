@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import Dialog from '../components/Dialog';
 import LeafletMap from '../components/LeafletMap';
+import Autocomplete from '../components/Autocomplete';
 import { useAuth } from '../hooks/useAuth';
 import type { AuthUser } from '../services/authService';
 import {
@@ -604,7 +605,7 @@ export default function ItemsPage() {
                 paginatedItems.map((item) => (
                   <tr
                     key={item.id}
-                    aria-label={`Pokaż szczegóły przedmiotu ${item.name}`}
+                    aria-label={`Pokaż szczegóły przedmiotu ${item.name} ${getStatusName(item.statusId)}`}
                     aria-pressed={item.id === selectedItem?.id}
                     className={
                       item.id === selectedItem?.id ? 'row-selected' : ''
@@ -616,7 +617,6 @@ export default function ItemsPage() {
                         setSelectedItemId(item.id);
                       }
                     }}
-                    role="button"
                     tabIndex={0}
                   >
                     <td className="td-name">{item.name}</td>
@@ -1766,47 +1766,42 @@ function CreateDelegationForm({
           <label className="form-label" htmlFor="delegation-user">
             Użytkownik
           </label>
-          <select
-            className="form-input"
-            id="delegation-user"
-            value={selectedUserId}
-            disabled={!!initial}
-            onChange={(event) => {
-              const value = event.target.value;
-              setSelectedUserId(value ? Number(value) : '');
-              if (value) setSelectedGroupId('');
+          <Autocomplete
+            placeholder="Wpisz email..."
+            initialValue={
+              initial?.user_email ??
+              owners.find((owner) => owner.id === initial?.user_id)?.fullName
+            }
+            disabled={!!initial || isExistingGroupSelected}
+            onSearch={delegationService.searchUsers}
+            onSelect={(option) => {
+              setSelectedUserId(option.value);
+              setSelectedGroupId('');
             }}
-          >
-            <option value="">Wybierz użytkownika</option>
-            {owners.map((owner) => (
-              <option key={owner.id} value={owner.id}>
-                {owner.fullName}
-              </option>
-            ))}
-          </select>
+            onClear={() => setSelectedUserId('')}
+          />
         </div>
         <div>
           <label className="form-label" htmlFor="delegation-group">
             Grupa
           </label>
-          <select
-            className="form-input"
-            id="delegation-group"
-            value={selectedGroupId}
-            disabled={!!initial}
-            onChange={(event) => {
-              const value = event.target.value;
-              setSelectedGroupId(value ? Number(value) : '');
-              if (value) setSelectedUserId('');
+          <Autocomplete
+            placeholder="Wpisz nazwę grupy..."
+            initialValue={
+              initial?.group_name ??
+              groups.find((group) => group.id === initial?.group_id)?.name
+            }
+            disabled={!!initial || selectedUserId !== ''}
+            onSearch={delegationService.searchGroups}
+            onSelect={(option) => {
+              setSelectedGroupId(option.value);
+              setSelectedUserId('');
+              if (option.extra?.defaultPermission) {
+                setPermission(option.extra.defaultPermission);
+              }
             }}
-          >
-            <option value="">Wybierz grupę</option>
-            {groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </select>
+            onClear={() => setSelectedGroupId('')}
+          />
         </div>
       </div>
 
