@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { eq, and, isNull, ne } from 'drizzle-orm';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
 import { categories, type Category } from '../db/schema';
-import { badRequest, forbidden, notFound } from '../lib/errors';
+import { badRequest, notFound } from '../lib/errors';
 import { authMiddleware } from '../middleware/auth';
 
 type Variables = {
@@ -133,8 +133,6 @@ router.get('/:id', async (c) => {
 });
 
 router.post('/', zValidator('json', createSchema), async (c) => {
-  // if (c.get('userRole') !== 'admin')
-  //   forbidden('Only admins can create categories');
   const db = c.get('db');
   const body = c.req.valid('json') as CategoryInput;
   const parentId = body.parent_id ?? null;
@@ -153,8 +151,6 @@ router.post('/', zValidator('json', createSchema), async (c) => {
 });
 
 router.patch('/:id', zValidator('json', createSchema), async (c) => {
-  // if (c.get('userRole') !== 'admin')
-  //   forbidden('Only admins can update categories');
   const db = c.get('db');
   const id = Number(c.req.param('id'));
   const body = c.req.valid('json') as CategoryInput;
@@ -196,12 +192,11 @@ router.delete('/:id', async (c) => {
     .from(categories)
     .where(eq(categories.id, id))
     .limit(1);
-
-  if (existing.length === 0)
-    notFound('Kategoria nie istnieje');
-
-  await deleteCategoryTree(db, id);
-
+  if (existing.length === 0) notFound('Kategoria nie istnieje');
+  const ids = await getDescendantIds(db, id);
+  for (const categoryId of [...ids].sort((a, b) => b - a)) {
+    await db.delete(categories).where(eq(categories.id, categoryId));
+  }
   return c.body(null, 204);
 });
 

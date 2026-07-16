@@ -109,23 +109,19 @@ export const categoryService = {
     }
 
     await delay(300);
-
-    const idsToRemove = new Set<number>();
-
-    const collectChildren = (parentId: number) => {
-      mock
-        .filter((c) => c.parentId === parentId)
-        .forEach((child) => {
-          idsToRemove.add(child.id);
-          collectChildren(child.id);
-        });
-    };
-
-    idsToRemove.add(id);
-    collectChildren(id);
-
-    mock = mock.filter((c) => !idsToRemove.has(c.id));
-  }
+    const ids = new Set<number>([id]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const category of mock) {
+        if (category.parentId !== null && ids.has(category.parentId) && !ids.has(category.id)) {
+          ids.add(category.id);
+          changed = true;
+        }
+      }
+    }
+    mock = mock.filter((c) => !ids.has(c.id));
+  },
 };
 
 function mapCat(c: BackendCat): Category {

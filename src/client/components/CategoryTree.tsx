@@ -7,6 +7,8 @@ interface CategoryTreeProps {
   onEdit: (category: Category) => void;
   onDelete: (categoryId: number) => void;
   loadingIds?: number[];
+  expandedIds?: Set<number>;
+  onExpandedChange?: (ids: Set<number>) => void;
 }
 
 export const CategoryTree: React.FC<CategoryTreeProps> = ({
@@ -15,15 +17,20 @@ export const CategoryTree: React.FC<CategoryTreeProps> = ({
   onEdit,
   onDelete,
   loadingIds = [],
+  expandedIds: controlledExpandedIds,
+  onExpandedChange,
 }) => {
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
-  const toggleExpanded = (cid: number) =>
-    setExpandedIds((prev) => {
-      const s = new Set(prev);
-      if (s.has(cid)) s.delete(cid);
-      else s.add(cid);
-      return s;
-    });
+  const [internalExpandedIds, setInternalExpandedIds] = useState<Set<number>>(
+    new Set()
+  );
+  const expandedIds = controlledExpandedIds ?? internalExpandedIds;
+  const toggleExpanded = (cid: number) => {
+    const next = new Set(expandedIds);
+    if (next.has(cid)) next.delete(cid);
+    else next.add(cid);
+    if (onExpandedChange) onExpandedChange(next);
+    else setInternalExpandedIds(next);
+  };
   const isLoading = (cid: number) => loadingIds.includes(cid);
 
   const renderNode = (node: CategoryTreeNode, depth = 0) => {

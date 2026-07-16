@@ -219,29 +219,16 @@ export default function LoginPage() {
         <p className="login-copy">
           Zaloguj się przez AGH Google SSO albo użyj konta developerskiego.
         </p>
+        <p className="login-copy">Wymagane logowanie</p>
       </div>
-
-      {/* {error && (
-        <div
-          className="login-panel"
-          style={{ borderColor: 'var(--color-error, #d32f2f)' }}
-        >
-          <div className="alert alert-error" style={{ margin: 0 }}>
-            {error}
-          </div>
-        </div>
-      )} */}
 
       {/* ── Google Sign-In (production) ─────────────────────────────────── */}
       {!devBypassAuth && (
         <div className="login-panel">
           <h2>AGH Google SSO</h2>
-          {configError && (
-            <div className="alert alert-error">
-              {configError}
-            </div>
-          )}
-          {isConfigLoading ? (
+          {configError ? (
+            <div className="alert alert-error">{configError}</div>
+          ) : isConfigLoading ? (
             <p className="login-copy">Pobieranie konfiguracji logowania...</p>
           ) : googleClientId ? (
             <>
@@ -298,6 +285,7 @@ export default function LoginPage() {
                 {isSubmitting ? 'Logowanie...' : 'Zaloguj (dev bypass)'}
               </button>
             </div>
+            {loginError ? <div className="alert alert-error">{loginError}</div> : null}
           </form>
         </div>
       )}
@@ -306,11 +294,7 @@ export default function LoginPage() {
       <div className="login-panel">
         <form className="form" onSubmit={handleLocalLogin}>
           <h2>Logowanie e-mailem</h2>
-            {loginError && (
-              <div className="alert alert-error">
-                {loginError}
-              </div>
-            )}
+          {loginError ? <div className="alert alert-error">{loginError}</div> : null}
           <label className="form-label" htmlFor="login-email">
             E-mail
           </label>
@@ -350,11 +334,7 @@ export default function LoginPage() {
       <div className="login-panel">
         <form className="form" onSubmit={handleRegister}>
           <h2>Rejestracja</h2>
-            {registerError && (
-              <div className="alert alert-error">
-                {registerError}
-              </div>
-            )}
+          {registerError ? <div className="alert alert-error">{registerError}</div> : null}
           <label className="form-label" htmlFor="register-email">
             E-mail
           </label>

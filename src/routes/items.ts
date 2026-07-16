@@ -1,9 +1,15 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq, like, or, and, desc, sql } from 'drizzle-orm';
+import { eq, like, or, and, desc, sql, inArray } from 'drizzle-orm';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
-import { borrowings, itemPhotos, items, type Item } from '../db/schema';
+import {
+  borrowings,
+  itemPhotos,
+  items,
+  notificationEvents,
+  type Item,
+} from '../db/schema';
 import { authMiddleware } from '../middleware/auth';
 import { notFound, badRequest, forbidden } from '../lib/errors';
 import { canUpdateItemField, getItemPermissionLevel } from '../lib/permissions';
@@ -27,7 +33,10 @@ const createSchema = z.object({
   serial: z.string().max(100).optional(),
   inventoryNumber: z.string().max(100).optional(),
   description: z.string().optional(),
-  purchaseDate: z.string().optional(),
+  purchaseDate: z
+    .string()
+    .regex(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/, 'Data zakupu musi mieć format RRRR-MM-DD')
+    .optional(),
   systemId: z.string().max(32).optional(),
   categoryId: z.number().int().positive().optional(),
   statusId: z.number().int().positive().optional(),
@@ -242,13 +251,22 @@ router.delete('/:id', async (c) => {
     .where(eq(items.id, id))
     .limit(1);
   if (existing.length === 0) notFound('Przedmiot nie istnieje');
-  const borrowing = await db
-    .select({ id: borrowings.id })
+  const borrowingRows = await db
+    .select({ id: borrowings.id, status: borrowings.status })
     .from(borrowings)
     .where(eq(borrowings.itemId, id))
-    .limit(1);
-  if (borrowing.length > 0) {
-    badRequest('Nie można usunąć przedmiotu z historią wypożyczeń.');
+  const hasActiveBorrowing = borrowingRows.some((borrowing) =>
+    ['pending', 'reserved', 'borrowed'].includes(borrowing.status)
+  );
+  if (hasActiveBorrowing) {
+    badRequest('Nie można usunąć przedmiotu z aktywnym wypożyczeniem.');
+  }
+  if (borrowingRows.length > 0) {
+    const borrowingIds = borrowingRows.map((borrowing) => borrowing.id);
+    await db
+      .delete(notificationEvents)
+      .where(inArray(notificationEvents.borrowingId, borrowingIds));
+    await db.delete(borrowings).where(eq(borrowings.itemId, id));
   }
 
   await createAuditLog(db, {

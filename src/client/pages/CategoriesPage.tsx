@@ -25,6 +25,9 @@ export const CategoriesPage: React.FC = () => {
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(
     null
   );
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<number>>(
+    new Set()
+  );
 
   const handleLoadTree = useCallback(async () => {
     setLoading(true);
@@ -74,6 +77,11 @@ export const CategoriesPage: React.FC = () => {
   ) => {
     try {
       setOperationError(null);
+      setExpandedCategoryIds((current) => {
+        const next = new Set(current);
+        next.add(parentId);
+        return next;
+      });
       setLoadingIds((p) => [...p, parentId]);
       await categoryService.create({ ...payload, parentId });
       setSelectedParentId(null);
@@ -256,6 +264,8 @@ export const CategoriesPage: React.FC = () => {
                 if (f) setDeletingCategory(f);
               }}
               loadingIds={loadingIds}
+              expandedIds={expandedCategoryIds}
+              onExpandedChange={setExpandedCategoryIds}
             />
           ) : (
             <div

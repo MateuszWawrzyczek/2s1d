@@ -10,11 +10,12 @@ import {
   ArrowLeftRight,
   AlertTriangle,
   FolderTree,
-  Inbox,
+  Activity,
   Database,
 } from 'lucide-react';
 import {
   dashboardService,
+  type DashboardActivity,
   type DashboardStats,
 } from '../services/dashboardService';
 import { healthService, type DatabaseStatus } from '../services/healthService';
@@ -52,6 +53,8 @@ export const HomePage = () => {
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [activity, setActivity] = useState<DashboardActivity[]>([]);
+  const [activityError, setActivityError] = useState<string | null>(null);
   const [databaseStatus, setDatabaseStatus] =
     useState<DatabaseStatus>('unknown');
   const [isHealthLoading, setIsHealthLoading] = useState(true);
@@ -81,6 +84,29 @@ export const HomePage = () => {
     return () => {
       isMounted = false;
       window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const getRecentActivity = dashboardService.getRecentActivity;
+    if (typeof getRecentActivity !== 'function') {
+      return () => {
+        isMounted = false;
+      };
+    }
+    getRecentActivity()
+      .then((rows) => {
+        if (isMounted) {
+          setActivity(rows);
+          setActivityError(null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setActivityError('Nie udało się pobrać aktywności.');
+      });
+    return () => {
+      isMounted = false;
     };
   }, []);
 
@@ -193,15 +219,31 @@ export const HomePage = () => {
       <div className="section-header">
         <h2>Ostatnia aktywność</h2>
       </div>
-      <div className="empty-state">
-        <div className="empty-state-icon">
-          <Inbox size={48} />
+      {activityError ? <div className="alert alert-error">{activityError}</div> : null}
+      {activity.length > 0 ? (
+        <div className="activity-list">
+          {activity.map((entry) => (
+            <div className="activity-row" key={entry.id}>
+              <div className="activity-row-icon"><Activity size={18} /></div>
+              <div>
+                <strong>{entry.action}</strong>
+                <div className="stat-card-note">
+                  {entry.itemName ?? entry.itemSystemId ?? `Przedmiot #${entry.itemId}`}
+                  {' · '}{entry.userEmail ?? 'system'}
+                </div>
+              </div>
+              <time dateTime={entry.timestamp}>
+                {new Date(entry.timestamp).toLocaleString('pl-PL')}
+              </time>
+            </div>
+          ))}
         </div>
-        <p className="empty-state-text">
-          Brak ostatniej aktywności. Dodaj przedmioty do systemu, aby rozpocząć
-          śledzenie inwentaryzacji.
-        </p>
-      </div>
+      ) : !activityError ? (
+        <div className="empty-state">
+          <div className="empty-state-icon"><Activity size={48} /></div>
+          <p className="empty-state-text">Brak ostatniej aktywności.</p>
+        </div>
+      ) : null}
     </div>
   );
 };

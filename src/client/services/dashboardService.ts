@@ -1,11 +1,22 @@
 import { borrowingReportService } from './borrowingReportService';
 import { itemService } from './itemService';
+import { authHeaders } from './authHeaders';
 
 export interface DashboardStats {
   items: number;
   borrowed: number;
   overdue: number;
   categories: number;
+}
+
+export interface DashboardActivity {
+  id: number;
+  timestamp: string;
+  action: string;
+  itemId: number;
+  userEmail: string | null;
+  itemName: string | null;
+  itemSystemId: string | null;
 }
 
 export const dashboardService = {
@@ -30,5 +41,12 @@ export const dashboardService = {
       overdue: overdueRows.length,
       categories: categories.length,
     };
+  },
+  async getRecentActivity(): Promise<DashboardActivity[]> {
+    const response = await fetch('/api/v1/audit-logs/recent', {
+      headers: authHeaders(),
+    });
+    if (!response.ok) throw new Error('Nie udało się pobrać aktywności.');
+    return response.json();
   },
 };

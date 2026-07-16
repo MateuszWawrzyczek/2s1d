@@ -72,9 +72,9 @@ export default function BatchQrPage() {
             value={qrSize}
             onChange={(event) => setQrSize(event.target.value as QrSize)}
           >
-            <option value="small">Mały</option>
-            <option value="medium">Średni</option>
-            <option value="large">Duży</option>
+            <option value="small">Mały — 24 mm</option>
+            <option value="medium">Średni — 30 mm</option>
+            <option value="large">Duży — 40 mm</option>
           </select>
           <button
             className="btn btn-primary"

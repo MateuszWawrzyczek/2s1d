@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import jsQR from 'jsqr';
 import {
   qrService,
@@ -7,6 +8,7 @@ import {
 } from '../services/qrService';
 
 export default function QrScannerPage() {
+  const navigate = useNavigate();
   const [qrData, setQrData] = useState('');
   const [scanned, setScanned] = useState<ScannedQrItem | null>(null);
   const [details, setDetails] = useState<QuickActionItem | null>(null);
@@ -257,19 +259,37 @@ export default function QrScannerPage() {
               </div>
             ) : null}
             {details.canEdit ? (
-              <button
-                className="btn btn-danger"
-                type="button"
-                onClick={markDamaged}
-              >
-                Oznacz jako uszkodzony
-              </button>
+              <div className="td-actions">
+                <button
+                  className="btn btn-danger"
+                  type="button"
+                  onClick={markDamaged}
+                >
+                  Oznacz jako uszkodzony
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={() => navigate(`/items?itemId=${details.id}`)}
+                >
+                  Otwórz szczegóły
+                </button>
+              </div>
             ) : (
               <div className="alert alert-warning">
                 Brak uprawnień do zmiany statusu przedmiotu. Skontaktuj się z
                 administratorem bądź opiekunem przedmiotu.
               </div>
             )}
+            {!details.canEdit ? (
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => navigate(`/items?itemId=${details.id}`)}
+              >
+                Otwórz szczegóły
+              </button>
+            ) : null}
           </>
         ) : (
           <p className="login-copy">Zeskanowany przedmiot pojawi się tutaj.</p>

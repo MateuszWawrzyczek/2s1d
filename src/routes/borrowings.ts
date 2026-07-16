@@ -333,13 +333,17 @@ router.post('/', zValidator('json', createSchema), async (c) => {
   const plannedReturnAt = new Date(body.plannedReturnAt);
   if (plannedReturnAt.getTime() <= Date.now())
     badRequest('Planowany zwrot musi być w przyszłości');
+  const unavailableStatuses =
+    body.mode === 'external'
+      ? (['pending', 'reserved', 'borrowed'] as const)
+      : (['reserved', 'borrowed'] as const);
   const unavailable = await db
     .select({ id: borrowings.id })
     .from(borrowings)
     .where(
       and(
         eq(borrowings.itemId, body.itemId),
-        inArray(borrowings.status, ['reserved', 'borrowed'])
+        inArray(borrowings.status, unavailableStatuses)
       )
     )
     .limit(1);
