@@ -153,9 +153,8 @@ export const authMiddleware = createMiddleware<{
     .limit(1);
   const user = userRows[0];
   if (!user || !user.isActive) {
-    unauthorized('Account is deactivated');
+    unauthorized('Konto wymaga zatwierdzenia przez administratora');
   }
-
   c.set('userId', user.id);
   c.set('userRole', user.role as 'admin' | 'user');
   c.set('isAuthenticated', true);

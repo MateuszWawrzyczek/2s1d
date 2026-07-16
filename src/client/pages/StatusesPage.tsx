@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Lock, X } from 'lucide-react';
+import { Lock } from 'lucide-react';
+import Dialog from '../components/Dialog';
 import { statusService } from '../services/statusService';
 import type {
   Status,
@@ -157,26 +158,21 @@ export default function StatusesPage() {
         </table>
       )}
       {modal && (
-        <div className="modal-overlay" onClick={() => setModal(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{modal.mode === 'create' ? 'Nowa flaga' : 'Edytuj flagę'}</h2>
-              <button className="modal-close" onClick={() => setModal(null)}>
-                <X size={18} />
-              </button>
-            </div>
-            {formError && <div className="alert alert-error">{formError}</div>}
-            {modal.mode === 'create' ? (
-              <CreateForm onSubmit={handleCreate} loading={formLoading} />
-            ) : (
-              <EditForm
-                status={modal.status!}
-                onSubmit={(payload) => handleUpdate(modal.status!.id, payload)}
-                loading={formLoading}
-              />
-            )}
-          </div>
-        </div>
+        <Dialog
+          title={modal.mode === 'create' ? 'Nowa flaga' : 'Edytuj flagę'}
+          onClose={() => setModal(null)}
+        >
+          {formError && <div className="alert alert-error">{formError}</div>}
+          {modal.mode === 'create' ? (
+            <CreateForm onSubmit={handleCreate} loading={formLoading} />
+          ) : (
+            <EditForm
+              status={modal.status!}
+              onSubmit={(payload) => handleUpdate(modal.status!.id, payload)}
+              loading={formLoading}
+            />
+          )}
+        </Dialog>
       )}
     </div>
   );

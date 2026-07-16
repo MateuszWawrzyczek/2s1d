@@ -5,7 +5,7 @@ import { badRequest, notFound, serviceUnavailable } from '../lib/errors';
 
 type Variables = {
   rawDb: Connection;
-  userRole: 'admin' | 'user';
+  userRole: 'none' | 'admin' | 'user';
   isAuthenticated: boolean;
 };
 

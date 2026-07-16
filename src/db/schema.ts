@@ -58,7 +58,9 @@ export const users = mysqlTable('users', {
     .notNull()
     .default('local'),
   isActive: boolean('is_active').notNull().default(true),
-  role: mysqlEnum('role', ['admin', 'user']).notNull().default('user'),
+  role: mysqlEnum('role', ['admin', 'user'])
+    .notNull()
+    .default('user'),
 });
 
 export const groups = mysqlTable('groups', {

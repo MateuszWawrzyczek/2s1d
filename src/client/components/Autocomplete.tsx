@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 
 export interface AutocompleteOption {
   value: number;
@@ -23,6 +23,7 @@ export default function Autocomplete({
   initialValue = '',
   disabled = false,
 }: Props) {
+  const listboxId = useId();
   const [query, setQuery] = useState(initialValue);
   const [options, setOptions] = useState<AutocompleteOption[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -111,6 +112,14 @@ export default function Autocomplete({
       <div style={{ display: 'flex', gap: 4 }}>
         <input
           ref={inputRef}
+          aria-activedescendant={
+            highlightIndex >= 0
+              ? `${listboxId}-option-${highlightIndex}`
+              : undefined
+          }
+          aria-autocomplete="list"
+          aria-controls={isOpen ? listboxId : undefined}
+          aria-expanded={isOpen}
           className="form-input"
           value={query}
           onChange={handleChange}
@@ -118,6 +127,7 @@ export default function Autocomplete({
           placeholder={placeholder}
           autoComplete="off"
           disabled={disabled}
+          role="combobox"
           style={{ flex: 1 }}
         />
         {query && (
@@ -125,6 +135,7 @@ export default function Autocomplete({
             type="button"
             className="btn btn-sm btn-secondary"
             onClick={handleClear}
+            aria-label="Wyczyść pole"
           >
             ×
           </button>
@@ -137,7 +148,9 @@ export default function Autocomplete({
       )}
       {isOpen && options.length > 0 && (
         <ul
+          id={listboxId}
           className="autocomplete-dropdown"
+          role="listbox"
           style={{
             position: 'absolute',
             top: '100%',
@@ -158,11 +171,14 @@ export default function Autocomplete({
           {options.map((opt, i) => (
             <li
               key={opt.value}
+              aria-selected={i === highlightIndex}
+              id={`${listboxId}-option-${i}`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 handleSelect(opt);
               }}
               onMouseEnter={() => setHighlightIndex(i)}
+              role="option"
               style={{
                 padding: '6px 10px',
                 cursor: 'pointer',

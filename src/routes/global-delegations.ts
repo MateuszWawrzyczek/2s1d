@@ -7,7 +7,7 @@ import { authMiddleware } from '../middleware/auth';
 type Variables = {
   db: MySql2Database<Record<string, never>>;
   userId: number;
-  userRole: 'admin' | 'user';
+  userRole: 'none' | 'admin' | 'user';
   isAuthenticated: boolean;
 };
 const router = new Hono<{ Variables: Variables; Bindings: Env }>();

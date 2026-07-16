@@ -18,6 +18,7 @@
     "test": "vitest run --config vitest.logic.config.ts && vitest run --config vitest.client.config.ts",
     "test:logic": "vitest run --config vitest.logic.config.ts",
     "test:client": "vitest run --config vitest.client.config.ts",
+    "test:e2e": "playwright test",
     "check": "tsc --noEmit",
     "lint": "eslint .",
     "format:check": "prettier --check 'src/**/*.{ts,tsx}' 'tests/**/*.ts'"
@@ -30,6 +31,7 @@
     "esbuild": "^0.28.1",
     "hono": "^4.12.25",
     "jspdf": "^4.2.1",
+    "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.17.0",
     "mysql2": "^3.22.5",

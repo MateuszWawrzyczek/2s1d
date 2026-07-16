@@ -120,6 +120,19 @@ async function ensureOk(response: Response): Promise<void> {
   try {
     const data = (await response.json()) as Record<string, unknown>;
     if (typeof data.detail === 'string') detail = data.detail;
+    else if (typeof data.message === 'string') detail = data.message;
+    else {
+      const issues = (data.error as { issues?: unknown[] } | undefined)?.issues;
+      const firstIssue = Array.isArray(issues) ? issues[0] : undefined;
+      if (
+        firstIssue &&
+        typeof firstIssue === 'object' &&
+        'message' in firstIssue &&
+        typeof firstIssue.message === 'string'
+      ) {
+        detail = firstIssue.message;
+      }
+    }
   } catch {
     // Keep fallback error.
   }

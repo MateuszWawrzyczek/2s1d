@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import Dialog from '../components/Dialog';
 import { borrowingService } from '../services/borrowingService';
 import { itemService } from '../services/itemService';
+import { useAuth } from '../hooks/useAuth';
 import type {
   Borrowing,
   BorrowingMode,
@@ -35,6 +36,7 @@ const modeLabels: Record<BorrowingMode, string> = {
 const activeStatuses: BorrowingStatus[] = ['pending', 'reserved', 'borrowed'];
 
 export default function BorrowingsPage() {
+  const { user } = useAuth();
   const [borrowings, setBorrowings] = useState<Borrowing[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [owners, setOwners] = useState<Owner[]>([]);
@@ -84,6 +86,26 @@ export default function BorrowingsPage() {
       ),
     [borrowings]
   );
+
+  const requestableItems = useMemo(() => {
+    const blocked = new Set(
+      activeBorrowings
+        .filter(
+          (borrowing) =>
+            borrowing.status === 'reserved' ||
+            borrowing.status === 'borrowed' ||
+            (borrowing.status === 'pending' &&
+              borrowing.borrowerId === user?.id)
+        )
+        .map((borrowing) => borrowing.itemId)
+    );
+    return items.filter((item) => !blocked.has(item.id));
+  }, [activeBorrowings, items, user?.id]);
+
+  const externalBorrowingItems = useMemo(() => {
+    if (user?.role === 'admin') return items;
+    return items.filter((item) => item.ownerId === user?.id);
+  }, [items, user?.id, user?.role]);
 
   const itemName = (itemId: number) =>
     items.find((item) => item.id === itemId)?.name ?? `Przedmiot #${itemId}`;
@@ -228,22 +250,46 @@ export default function BorrowingsPage() {
                 <div className="borrowing-column__list">
                   {activeBorrowings
                     .filter((borrowing) => borrowing.status === status)
-                    .map((borrowing) => (
-                      <BorrowingCard
-                        actionLoading={actionLoading}
-                        borrowerName={borrowerName(borrowing)}
-                        borrowing={borrowing}
-                        itemName={itemName(borrowing.itemId)}
-                        key={borrowing.id}
-                        onApprove={() => runAction(borrowing, 'approve')}
-                        onHandover={() => runAction(borrowing, 'handover')}
-                        onReject={() => runAction(borrowing, 'reject')}
-                        onReturn={() => {
-                          setFormError(null);
-                          setModal({ mode: 'return', borrowing });
-                        }}
-                      />
-                    ))}
+                    .map((borrowing) => {
+                      const item = items.find(
+                        (current) => current.id === borrowing.itemId
+                      );
+                      const isAdmin = user?.role === 'admin';
+                      const isOwner = item?.ownerId === user?.id;
+                      const isBorrower = borrowing.borrowerId === user?.id;
+                      return (
+                        <BorrowingCard
+                          actionLoading={actionLoading}
+                          borrowerName={borrowerName(borrowing)}
+                          borrowing={borrowing}
+                          canApprove={Boolean(isAdmin || isOwner)}
+                          canHandover={Boolean(
+                            isAdmin ||
+                            isOwner ||
+                            (borrowing.mode === 'asynchronous' && isBorrower)
+                          )}
+                          canReturn={Boolean(
+                            isAdmin ||
+                            isOwner ||
+                            (borrowing.mode !== 'classic' && isBorrower)
+                          )}
+                          handoverLabel={
+                            borrowing.mode === 'asynchronous' && isBorrower
+                              ? 'Odbierz'
+                              : 'Wydaj'
+                          }
+                          itemName={itemName(borrowing.itemId)}
+                          key={borrowing.id}
+                          onApprove={() => runAction(borrowing, 'approve')}
+                          onHandover={() => runAction(borrowing, 'handover')}
+                          onReject={() => runAction(borrowing, 'reject')}
+                          onReturn={() => {
+                            setFormError(null);
+                            setModal({ mode: 'return', borrowing });
+                          }}
+                        />
+                      );
+                    })}
                   {activeBorrowings.every(
                     (borrowing) => borrowing.status !== status
                   ) ? (
@@ -266,6 +312,7 @@ export default function BorrowingsPage() {
                 <th>Tryb</th>
                 <th>Status</th>
                 <th>Planowany zwrot</th>
+                <th>Komentarz zwrotu</th>
                 <th>Utworzono</th>
               </tr>
             </thead>
@@ -289,6 +336,7 @@ export default function BorrowingsPage() {
                       </span>
                     </td>
                     <td>{formatDate(borrowing.plannedReturnAt)}</td>
+                    <td>{borrowing.returnComment || '—'}</td>
                     <td>{formatDate(borrowing.createdAt)}</td>
                   </tr>
                 ))
@@ -299,41 +347,33 @@ export default function BorrowingsPage() {
       )}
 
       {modal ? (
-        <div className="modal-overlay" onClick={() => setModal(null)}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{modalTitle(modal)}</h2>
-              <button className="modal-close" onClick={() => setModal(null)}>
-                <X size={18} />
-              </button>
-            </div>
-            {formError ? (
-              <div className="alert alert-error">{formError}</div>
-            ) : null}
-            {modal.mode === 'request' ? (
-              <BorrowingRequestForm
-                items={items}
-                loading={formLoading}
-                onSubmit={handleRequest}
-              />
-            ) : null}
-            {modal.mode === 'external' ? (
-              <ExternalBorrowingForm
-                items={items}
-                loading={formLoading}
-                onSubmit={handleExternal}
-              />
-            ) : null}
-            {modal.mode === 'return' ? (
-              <ReturnBorrowingForm
-                borrowing={modal.borrowing}
-                itemName={itemName(modal.borrowing.itemId)}
-                loading={formLoading}
-                onSubmit={(comment) => handleReturn(modal.borrowing, comment)}
-              />
-            ) : null}
-          </div>
-        </div>
+<Dialog title={modalTitle(modal)} onClose={() => setModal(null)}>
+  {formError ? (
+    <div className="alert alert-error">{formError}</div>
+  ) : null}
+  {modal.mode === 'request' ? (
+    <BorrowingRequestForm
+      items={requestableItems}
+      loading={formLoading}
+      onSubmit={handleRequest}
+    />
+  ) : null}
+  {modal.mode === 'external' ? (
+    <ExternalBorrowingForm
+      items={externalBorrowingItems}
+      loading={formLoading}
+      onSubmit={handleExternal}
+    />
+  ) : null}
+  {modal.mode === 'return' ? (
+    <ReturnBorrowingForm
+      borrowing={modal.borrowing}
+      itemName={itemName(modal.borrowing.itemId)}
+      loading={formLoading}
+      onSubmit={(comment) => handleReturn(modal.borrowing, comment)}
+    />
+  ) : null}
+</Dialog>
       ) : null}
     </div>
   );
@@ -343,6 +383,10 @@ function BorrowingCard({
   actionLoading,
   borrowerName,
   borrowing,
+  canApprove,
+  canHandover,
+  canReturn,
+  handoverLabel,
   itemName,
   onApprove,
   onHandover,
@@ -352,6 +396,10 @@ function BorrowingCard({
   actionLoading: string | null;
   borrowerName: string;
   borrowing: Borrowing;
+  canApprove: boolean;
+  canHandover: boolean;
+  canReturn: boolean;
+  handoverLabel: string;
   itemName: string;
   onApprove: () => void;
   onHandover: () => void;
@@ -382,7 +430,7 @@ function BorrowingCard({
         </div>
       </dl>
       <div className="borrowing-card__actions">
-        {borrowing.status === 'pending' ? (
+        {borrowing.status === 'pending' && canApprove ? (
           <>
             <button
               className="btn btn-sm btn-primary"
@@ -404,7 +452,7 @@ function BorrowingCard({
             </button>
           </>
         ) : null}
-        {borrowing.status === 'reserved' ? (
+        {borrowing.status === 'reserved' && canHandover ? (
           <button
             className="btn btn-sm btn-primary"
             disabled={actionLoading !== null}
@@ -413,10 +461,10 @@ function BorrowingCard({
           >
             {actionLoading === `${borrowing.id}:handover`
               ? 'Zapis...'
-              : 'Wydaj'}
+              : handoverLabel}
           </button>
         ) : null}
-        {borrowing.status === 'borrowed' ? (
+        {borrowing.status === 'borrowed' && canReturn ? (
           <button
             className="btn btn-sm btn-secondary"
             disabled={actionLoading !== null}
@@ -444,13 +492,22 @@ function BorrowingRequestForm({
   const [mode, setMode] = useState<BorrowingRequestPayload['mode']>('classic');
   const [plannedReturnAt, setPlannedReturnAt] = useState('');
   const [dateError, setDateError] = useState<string | null>(null);
+  useEffect(() => {
+    setItemId(items[0]?.id ?? 0);
+  }, [items]);
   return (
     <div className="form">
+      {items.length === 0 ? (
+        <div className="alert alert-info">
+          Brak przedmiotów dostępnych do złożenia wniosku.
+        </div>
+      ) : null}
       <label className="form-label">Przedmiot *</label>
       <select
         className="form-input"
         value={itemId}
         onChange={(event) => setItemId(Number(event.target.value))}
+        disabled={items.length === 0}
       >
         {items.map((item) => (
           <option key={item.id} value={item.id}>
@@ -518,13 +575,22 @@ function ExternalBorrowingForm({
   const [externalBorrower, setExternalBorrower] = useState('');
   const [plannedReturnAt, setPlannedReturnAt] = useState('');
   const [dateError, setDateError] = useState<string | null>(null);
+  useEffect(() => {
+    setItemId(items[0]?.id ?? 0);
+  }, [items]);
   return (
     <div className="form">
+      {items.length === 0 ? (
+        <div className="alert alert-info">
+          Brak przedmiotów, dla których możesz utworzyć wypożyczenie zewnętrzne.
+        </div>
+      ) : null}
       <label className="form-label">Przedmiot *</label>
       <select
         className="form-input"
         value={itemId}
         onChange={(event) => setItemId(Number(event.target.value))}
+        disabled={items.length === 0}
       >
         {items.map((item) => (
           <option key={item.id} value={item.id}>

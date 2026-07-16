@@ -113,6 +113,17 @@ export const Layout = () => {
   const { user } = useAuth();
 
   useEffect(() => {
+    if (!sidebarOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [sidebarOpen]);
+
+  useEffect(() => {
     if (!user) {
       setNotificationCount(0);
       return;
@@ -141,32 +152,26 @@ export const Layout = () => {
     };
   }, [user]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSidebarOpen(false);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const closeSidebar = () => setSidebarOpen(false);
   const markNotificationsSeen = () => {
     window.localStorage.setItem(
       NOTIFICATIONS_SEEN_AT_KEY,
       new Date().toISOString()
     );
     setNotificationCount(0);
-    closeSidebar();
+    setSidebarOpen(false);
   };
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">
+        Przejdź do treści
+      </a>
       <button
         className="btn btn-ghost mobile-nav-toggle"
-        onClick={() => setSidebarOpen((open) => !open)}
-        aria-label="Menu"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
         aria-controls="main-navigation"
         aria-expanded={sidebarOpen}
+        aria-label="Menu"
         type="button"
       >
         <Menu size={20} />
@@ -180,7 +185,8 @@ export const Layout = () => {
             background: 'rgba(0,0,0,0.5)',
             zIndex: 49,
           }}
-          onClick={closeSidebar}
+          aria-hidden="true"
+          onClick={() => setSidebarOpen(false)}
         />
       )}
 
@@ -191,7 +197,7 @@ export const Layout = () => {
         <Link
           to="/"
           className="sidebar-brand"
-          onClick={closeSidebar}
+          onClick={() => setSidebarOpen(false)}
         >
           <div className="sidebar-brand-icon">SZ</div>
           <div className="sidebar-brand-text">
@@ -229,7 +235,7 @@ export const Layout = () => {
                       onClick={
                         item.to === '/notifications'
                           ? markNotificationsSeen
-                          : closeSidebar
+                          : () => setSidebarOpen(false)
                       }
                     >
                       <span className="nav-link-icon">
@@ -259,7 +265,7 @@ export const Layout = () => {
                 style={{ marginBottom: 8, width: '100%', textAlign: 'left' }}
                 onClick={() => {
                   authService.logout();
-                  closeSidebar();
+                  setSidebarOpen(false);
                 }}
               >
                 <span className="nav-link-icon">
@@ -274,7 +280,9 @@ export const Layout = () => {
                 <div className="sidebar-user-info">
                   <div className="sidebar-user-name">{user.email}</div>
                   <div className="sidebar-user-role">
-                    {user.role === 'admin' ? 'Administrator' : 'Użytkownik'}
+                    {user.role === 'admin'
+                      ? 'Administrator'
+                      : 'Pracownik'}
                   </div>
                 </div>
               </div>
@@ -285,7 +293,7 @@ export const Layout = () => {
                 to="/login"
                 className="nav-link"
                 style={{ marginBottom: 8 }}
-                onClick={closeSidebar}
+                onClick={() => setSidebarOpen(false)}
               >
                 <span className="nav-link-icon">
                   <LogIn size={18} />
@@ -304,7 +312,7 @@ export const Layout = () => {
         </div>
       </aside>
 
-      <main className="main-content">
+      <main className="main-content" id="main-content" tabIndex={-1}>
         <Outlet />
       </main>
     </div>

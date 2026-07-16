@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react';
 import { userService, type User } from '../services/userService';
 import {
-  UserCog,
   Shield,
   User as UserIcon,
   Loader2,
+  UserCheck,
   UserX,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+
+const roleLabels = {
+  user: 'Pracownik',
+  admin: 'Administrator',
+} as const;
+
+function displayedRoleLabel(user: User): string {
+  return user.isActive ? roleLabels[user.role] : 'Brak uprawnień';
+}
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
@@ -54,19 +63,30 @@ export default function UsersPage() {
     }
   };
 
-  const handleChangeRole = async (
-    id: number,
-    currentRole: 'admin' | 'user'
-  ) => {
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    const confirmMsg = `Czy na pewno chcesz zmienić rolę użytkownika na ${newRole === 'admin' ? 'Administrator' : 'Użytkownik'}?`;
+  const handleActivate = async (id: number) => {
+    setActionLoading(id);
+    try {
+      const updated = await userService.activate(id);
+      setUsers(users.map((u) => (u.id === id ? updated : u)));
+    } catch (err) {
+      alert(
+        err instanceof Error
+          ? err.message
+          : 'Błąd podczas aktywacji użytkownika.'
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
+  const handleSetRole = async (id: number, role: 'admin' | 'user') => {
+    const confirmMsg = `Czy na pewno chcesz ustawić rolę użytkownika na "${roleLabels[role]}"?`;
     if (!window.confirm(confirmMsg)) return;
 
     setActionLoading(id);
     try {
-      await userService.updateRole(id, newRole);
-      setUsers(users.map((u) => (u.id === id ? { ...u, role: newRole } : u)));
+      const updated = await userService.updateRole(id, role);
+      setUsers(users.map((u) => (u.id === id ? updated : u)));
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Błąd podczas zmiany roli.');
     } finally {
@@ -80,12 +100,12 @@ export default function UsersPage() {
         <div>
           <h1 className="page-title">Zarządzanie użytkownikami</h1>
           <p className="page-subtitle">
-            Zarządzaj aktywnością kont i uprawnieniami administratora.
+            Zatwierdzaj konta i wybieraj poziom uprawnień użytkowników.
           </p>
         </div>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error ? <div className="alert alert-error">{error}</div> : null}
 
       {isLoading ? (
         <div className="loading-state">
@@ -145,19 +165,21 @@ export default function UsersPage() {
                     </td>
                     <td>
                       <span
-                        className={`badge ${u.role === 'admin' ? 'badge-accent' : 'badge-custom'}`}
+                        className={`badge ${u.role === 'admin' && u.isActive ? 'badge-accent' : 'badge-custom'}`}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '4px',
                         }}
                       >
-                        {u.role === 'admin' ? (
+                        {!u.isActive ? (
+                          <UserX size={12} />
+                        ) : u.role === 'admin' ? (
                           <Shield size={12} />
                         ) : (
                           <UserIcon size={12} />
                         )}
-                        {u.role === 'admin' ? 'Administrator' : 'Pracownik'}
+                        {displayedRoleLabel(u)}
                       </span>
                     </td>
                     <td>
@@ -173,12 +195,22 @@ export default function UsersPage() {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'flex-end',
-                          gap: '8px',
-                        }}
+                        className="td-actions"
+                        style={{ justifyContent: 'flex-end' }}
                       >
+                        {!u.isActive ? (
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={() => handleActivate(u.id)}
+                            disabled={actionLoading === u.id}
+                          >
+                            <UserCheck
+                              size={14}
+                              style={{ marginRight: '4px' }}
+                            />
+                            Zatwierdź
+                          </button>
+                        ) : null}
                         {u.isActive && currentUser?.id !== u.id ? (
                           <button
                             className="btn btn-sm btn-danger"
@@ -189,19 +221,23 @@ export default function UsersPage() {
                             Dezaktywuj
                           </button>
                         ) : null}
-                        {currentUser?.id !== u.id && (
-                          <button
-                            className="btn btn-sm btn-secondary"
-                            onClick={() => handleChangeRole(u.id, u.role)}
+                        {u.isActive && currentUser?.id !== u.id ? (
+                          <select
+                            className="form-input form-input--compact"
+                            value={u.role}
+                            onChange={(event) =>
+                              handleSetRole(
+                                u.id,
+                                event.target.value as 'admin' | 'user'
+                              )
+                            }
                             disabled={actionLoading === u.id}
                             title="Zmień rolę"
                           >
-                            <UserCog size={14} style={{ marginRight: '4px' }} />
-                            {u.role === 'admin'
-                              ? 'Zdejmij admina'
-                              : 'Nadaj admina'}
-                          </button>
-                        )}
+                            <option value="user">Pracownik</option>
+                            <option value="admin">Administrator</option>
+                          </select>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

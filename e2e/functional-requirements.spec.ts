@@ -244,7 +244,7 @@ test('US role i dostęp: niezalogowany użytkownik nie widzi zasobów, rejestrac
   await page.locator('#register-password').fill('bezpieczne-haslo');
   await page.getByRole('button', { name: 'Zarejestruj' }).click();
   await expect(
-    page.getByText('Konto utworzone. Możesz się zalogować.')
+    page.getByText('Konto wymaga zatwierdzenia przez administratora.')
   ).toBeVisible();
 
   await page.locator('#dev-email').fill('admin@agh.edu.pl');
@@ -432,6 +432,12 @@ test('US-02/03/05 przedmioty: dodawanie, identyfikacja, klasyfikacja, mapa lokal
 test('US-03/04 QR: skan pokazuje szczegóły, lokalizację i szybką zmianę statusu na uszkodzony', async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: undefined,
+    });
+  });
   await page.goto('/qr');
 
   await page.getByLabel('Kod QR').fill('ITEM-AGH-0001');
@@ -451,7 +457,9 @@ test('US-03/04 QR: skan pokazuje szczegóły, lokalizację i szybką zmianę sta
 
   await page.getByRole('button', { name: 'Skanuj kamerą' }).click();
   await expect(
-    page.getByText('Ta przeglądarka nie udostępnia skanowania kodów QR.')
+    page.getByText(
+      'Ta przeglądarka nie udostępnia skanowania kodów QR. Wpisz System ID ręcznie albo wczytaj obraz etykiety.'
+    )
   ).toBeVisible();
 });
 
@@ -948,6 +956,19 @@ async function mockApi(page: Page) {
     }
     if (
       path.match(/\/api\/v1\/borrowings\/\d+\/approve/) &&
+      method === 'PATCH'
+    ) {
+      const id = Number(path.split('/').at(-2));
+      currentBorrowings = currentBorrowings.map((item) =>
+        item.id === id ? { ...item, status: 'reserved' } : item
+      );
+      return json(
+        route,
+        currentBorrowings.find((item) => item.id === id)
+      );
+    }
+    if (
+      path.match(/\/api\/v1\/borrowings\/\d+\/handover/) &&
       method === 'PATCH'
     ) {
       const id = Number(path.split('/').at(-2));

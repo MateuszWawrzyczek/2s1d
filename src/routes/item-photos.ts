@@ -3,15 +3,14 @@ import { eq, desc } from 'drizzle-orm';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
 import { itemPhotos, items, users } from '../db/schema';
 import { authMiddleware } from '../middleware/auth';
-import { notFound, badRequest, forbidden } from '../lib/errors';
+import { notFound, badRequest } from '../lib/errors';
 import { createAuditLog } from '../lib/audit';
-import { getItemPermissionLevel } from '../lib/permissions';
 import { createObjectStorage } from '../lib/storage';
 
 type Variables = {
   db: MySql2Database<Record<string, never>>;
   userId: number;
-  userRole: 'admin' | 'user';
+  userRole: 'none' | 'admin' | 'user';
   isAuthenticated: boolean;
 };
 const router = new Hono<{ Variables: Variables; Bindings: Env }>();
@@ -43,27 +42,16 @@ function toResponse(p: PhotoResponseRow) {
   };
 }
 
-async function requireItemPhotoAccess(
+async function ensureItemExists(
   db: MySql2Database<Record<string, never>>,
-  itemId: number,
-  userId: number,
-  userRole: 'admin' | 'user'
+  itemId: number
 ) {
   const item = await db
-    .select({ ownerId: items.ownerId, ownerGroupId: items.ownerGroupId })
+    .select({ id: items.id })
     .from(items)
     .where(eq(items.id, itemId))
     .limit(1);
-  if (item.length === 0) notFound('Item not found');
-  const permission = await getItemPermissionLevel(
-    db,
-    itemId,
-    userId,
-    userRole,
-    item[0].ownerId,
-    item[0].ownerGroupId
-  );
-  if (!permission) forbidden('Brak uprawnień do zdjęć przedmiotu');
+  if (item.length === 0) notFound('Przedmiot nie istnieje');
   return item[0];
 }
 
@@ -72,8 +60,8 @@ router.get('/:itemId/photos', async (c) => {
   const db = c.get('db');
   const itemId = Number(c.req.param('itemId'));
   if (!Number.isInteger(itemId) || itemId <= 0)
-    badRequest('itemId must be a positive integer');
-  await requireItemPhotoAccess(db, itemId, c.get('userId'), c.get('userRole'));
+    badRequest('Identyfikator przedmiotu musi być dodatnią liczbą całkowitą');
+  await ensureItemExists(db, itemId);
   const rows = await db
     .select({
       id: itemPhotos.id,
@@ -98,11 +86,11 @@ router.post('/:itemId/photos', async (c) => {
   const itemId = Number(c.req.param('itemId'));
   const userId = c.get('userId');
   if (!Number.isInteger(itemId) || itemId <= 0)
-    badRequest('itemId must be a positive integer');
-  await requireItemPhotoAccess(db, itemId, userId, c.get('userRole'));
+    badRequest('Identyfikator przedmiotu musi być dodatnią liczbą całkowitą');
+  await ensureItemExists(db, itemId);
   const formData = await c.req.formData();
   const candidate = formData.get('file');
-  if (!(candidate instanceof File)) badRequest('No file uploaded');
+  if (!(candidate instanceof File)) badRequest('Nie przesłano pliku');
   const file = candidate;
   if (file.size === 0 || file.size > MAX_PHOTO_BYTES)
     badRequest('Plik musi mieć od 1 bajta do 10 MB');
@@ -175,18 +163,18 @@ router.get('/:itemId/photos/:photoId', async (c) => {
     !Number.isInteger(photoId) ||
     photoId <= 0
   )
-    badRequest('Invalid photo identifier');
+    badRequest('Nieprawidłowy identyfikator zdjęcia');
   const rows = await db
     .select()
     .from(itemPhotos)
     .where(eq(itemPhotos.id, photoId))
     .limit(1);
   if (rows.length === 0 || rows[0].itemId !== itemId)
-    notFound('Photo not found');
-  await requireItemPhotoAccess(db, itemId, c.get('userId'), c.get('userRole'));
+    notFound('Zdjęcie nie istnieje');
+  await ensureItemExists(db, itemId);
   const photo = rows[0];
   const object = await storage.getStream(photo.storagePath);
-  if (!object) notFound('Photo file missing in storage');
+  if (!object) notFound('Plik zdjęcia nie istnieje w magazynie');
   return new Response(object, {
     headers: {
       'Content-Type': photo.contentType,
